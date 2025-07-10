@@ -1,0 +1,420 @@
+/* Reset + Base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: linear-gradient(to right, #1b1b1d, #222226);
+  color: #eee;
+  font-family: 'Segoe UI', 'Roboto', sans-serif;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 40px;
+  background: rgba(30, 30, 30, 0.8);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+}
+
+h1 {
+  font-size: 22px;
+  color: #fff;
+  font-weight: 500;
+}
+
+.library-btn {
+  background: #2f2f2f;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  border: 1px solid #444;
+  color: #ddd;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.library-btn:hover {
+  background: #3c3c3c;
+}
+
+/* Main layout */
+main {
+  padding: 30px 60px;
+}
+
+section {
+  margin-bottom: 40px;
+}
+
+h2 {
+  font-size: 18px;
+  margin-bottom: 12px;
+  color: #ccc;
+  font-weight: 400;
+}
+
+/* Card grid */
+.card-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+/* Card style */
+.card, .upload-card {
+  width: 200px;
+  height: 130px;
+  background: linear-gradient(145deg, #2a2a2c, #1f1f21);
+  border-radius: 16px;
+  border: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: inherit;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.card:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+}
+
+.card:hover::before {
+  opacity: 0.15;
+}
+
+.icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+  color: #f0f0f0;
+}
+
+.label {
+  font-size: 14px;
+  color: #ccc;
+  text-align: center;
+}
+
+/* Disabled card */
+.card.disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Canvas preview */
+canvas {
+  display: block;
+  margin: 40px auto 20px;
+  border-radius: 10px;
+  border: 3px solid #3c3c3c;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  background: #111;
+  image-rendering: pixelated;
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-box {
+  background: #2b2b2b;
+  padding: 30px 25px;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+  text-align: center;
+  min-width: 300px;
+}
+
+.modal-box h3 {
+  font-size: 18px;
+  margin-bottom: 15px;
+  color: #eee;
+}
+
+.modal-box input {
+  width: 100%;
+  padding: 10px;
+  font-size: 15px;
+  margin-bottom: 20px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #1d1d1d;
+  color: #fff;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.modal-buttons button {
+  flex: 1;
+  padding: 8px;
+  background: #3b3b3b;
+  color: #eee;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.modal-buttons button:hover {
+  background: #505050;
+}
+
+/* Studio Styles */
+#studio .studio-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  background: #2a2a2a;
+  border-bottom: 2px solid #333;
+  margin-bottom: 30px;
+}
+
+#studio-animation-name {
+  font-size: 20px;
+  color: #f0f0f0;
+}
+
+/* Studio Layout */
+.studio-layout {
+  display: flex;
+  height: calc(100vh - 80px);
+  background: #1e1e1e;
+}
+
+.studio-tools {
+  width: 50px;
+  background: #2c2c2c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0;
+  gap: 8px;
+  border-right: 1px solid #444;
+}
+
+.studio-tools button {
+  background: #3a3a3a;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.studio-tools button:hover {
+  background: #505050;
+}
+
+.studio-canvas-wrapper {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #111;
+  position: relative;
+}
+
+.studio-canvas-wrapper::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 1px;
+  top: 50%;
+  background: red;
+  opacity: 0.3;
+}
+.studio-canvas-wrapper::after {
+  content: '';
+  position: absolute;
+  height: 100%;
+  width: 1px;
+  left: 50%;
+  background: blue;
+  opacity: 0.3;
+}
+
+canvas#preview {
+  border: 2px solid #333;
+  image-rendering: pixelated;
+  background: repeating-conic-gradient(#1a1a1a 0deg 90deg, #181818 90deg 180deg) 0 0 / 20px 20px;
+}
+
+.studio-sprites {
+  width: 200px;
+  background: #2a2a2a;
+  padding: 10px;
+  overflow-y: auto;
+  border-left: 1px solid #444;
+}
+
+.sprite-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sprite-grid img {
+  width: 48px;
+  height: 48px;
+  border: 2px solid #444;
+  border-radius: 4px;
+  background: #000;
+}
+
+
+/* Better layout for new studio */
+.studio-container {
+  display: flex;
+  height: calc(100vh - 70px);
+  background: #191919;
+}
+
+/* Sidebar buttons */
+.studio-sidebar {
+  width: 60px;
+  background: #2b2b2b;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 5px;
+  gap: 10px;
+  border-right: 1px solid #3a3a3a;
+}
+
+.studio-sidebar button {
+  background: #444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.studio-sidebar button:hover {
+  background: #666;
+}
+
+/* Main canvas area */
+.studio-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #111;
+  position: relative;
+}
+
+.canvas-wrapper {
+  position: relative;
+  border: 3px solid #333;
+  border-radius: 10px;
+  box-shadow: 0 0 10px #000;
+  background: conic-gradient(#1c1c1c 0deg 90deg, #181818 90deg 180deg) 0 0 / 20px 20px;
+}
+
+canvas#preview {
+  image-rendering: pixelated;
+  background: transparent;
+  display: block;
+}
+
+/* Grid crosshair */
+.canvas-wrapper::before,
+.canvas-wrapper::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 0, 0, 0.4);
+}
+.canvas-wrapper::before {
+  width: 1px;
+  height: 100%;
+  left: 50%;
+  top: 0;
+}
+.canvas-wrapper::after {
+  height: 1px;
+  width: 100%;
+  top: 50%;
+  left: 0;
+}
+
+/* Sprite panel right side */
+.studio-sprites {
+  width: 220px;
+  background: #232323;
+  padding: 15px;
+  color: #fff;
+  border-left: 1px solid #3a3a3a;
+  overflow-y: auto;
+}
+
+.studio-sprites h3 {
+  font-size: 16px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 5px;
+}
+
+.sprite-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 48px);
+  gap: 10px;
+}
+
+.sprite-grid img {
+  width: 48px;
+  height: 48px;
+  border: 2px solid #444;
+  border-radius: 4px;
+  background: black;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.sprite-grid img:hover {
+  transform: scale(1.05);
+  border-color: #888;
+}

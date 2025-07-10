@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RfAni Animation Tool</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>RfAni Animation Tool</h1>
+    <div class="library-btn">📂 My Library</div>
+  </header>
+
+  <!-- Main Menu -->
+  <main id="main-menu">
+    <section>
+      <h2>New animation</h2>
+      <div class="card-row">
+        <div class="card" id="new-animation">
+          <div class="icon">➕</div>
+          <div class="label">New empty animation</div>
+        </div>
+        <label class="card upload-card">
+          <input type="file" id="rfani-loader" accept=".json,.rfani" hidden />
+          <div class="icon">☁️</div>
+          <div class="label">Load .rfani file</div>
+        </label>
+      </div>
+    </section>
+    <section>
+      <h2>Last opened</h2>
+      <div id="recent-list" class="card-row">
+        <div class="card disabled">
+          <div class="icon">🕒</div>
+          <div class="label">No files yet</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Studio -->
+  <main id="studio" style="display: none;">
+    <div class="studio-header">
+      <h2 id="studio-animation-name">Unnamed</h2>
+    </div>
+    <div class="studio-container">
+      <div class="studio-sidebar">
+        <button id="tool-pan" title="Pan Tool">🖐️</button>
+        <button id="tool-add-sprite" title="Add Sprite">➕</button>
+        <button id="tool-add-frame" title="Add Frame">🎞️</button>
+        <button id="tool-toggle-grid" title="Toggle Grid">🔲</button>
+        <button id="tool-toggle-play" title="Play">▶️</button>
+        <input type="file" id="sprite-loader" accept="image/*" style="display: none;">
+      </div>
+
+      <div class="studio-main">
+        <div class="canvas-wrapper">
+          <canvas id="preview" width="160" height="160"></canvas>
+        </div>
+      </div>
+
+      <div class="studio-sprites">
+        <h3>Sprites</h3>
+        <div class="sprite-grid" id="sprite-panel"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- General Modal -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-box">
+      <h3 id="modal-title">Modal Title</h3>
+      <input type="text" id="modal-input" placeholder="Enter something..." />
+      <div class="modal-buttons">
+        <button id="modal-confirm-btn">OK</button>
+        <button id="modal-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
