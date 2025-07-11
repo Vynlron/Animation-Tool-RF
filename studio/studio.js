@@ -11,9 +11,6 @@ let canvasRef = null;
 // Infinite canvas state
 let offsetX = 0;
 let offsetY = 0;
-let isDragging = false;
-let dragStartX = 0;
-let dragStartY = 0;
 
 export function pan(dx, dy) {
   offsetX += dx / zoomLevel;
@@ -48,25 +45,7 @@ export function initStudio(canvasElement) {
     zoomLevel = Math.round(zoomLevel * 10) / 10;
   });
 
-  // Mouse drag pan
-  canvasElement.addEventListener('mousedown', (e) => {
-    isDragging = true;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
-  });
-
-  window.addEventListener('mouseup', () => {
-    isDragging = false;
-  });
-
-  window.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
-    const dx = e.clientX - dragStartX;
-    const dy = e.clientY - dragStartY;
-    pan(dx, dy);
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
-  });
+  // Pan interactions are handled by the tools module
 
   requestAnimationFrame(loop);
 }
@@ -74,12 +53,12 @@ export function initStudio(canvasElement) {
 /**
  * Draws a scrolling background grid that moves with pan & zoom.
  */
-function drawGrid(ctx, width, height, zoom) {
+function drawGrid(ctx, width, height, offsetX, offsetY, zoom) {
   const baseSize = 10;
   const gridSize = baseSize * zoom;
   const majorLineEvery = 5;
-  const centerX = width / 2;
-  const centerY = height / 2;
+  const centerX = width / 2 + offsetX * zoom;
+  const centerY = height / 2 + offsetY * zoom;
 
   ctx.save();
   let index = 1;
@@ -164,7 +143,7 @@ function loop(time) {
   const centerX = canvasRef.width / 2;
   const centerY = canvasRef.height / 2;
 
-  drawGrid(ctx, canvasRef.width, canvasRef.height, zoomLevel);
+  drawGrid(ctx, canvasRef.width, canvasRef.height, offsetX, offsetY, zoomLevel);
   drawCrosshair(ctx, centerX, centerY);
 
   if (rfAni) {
