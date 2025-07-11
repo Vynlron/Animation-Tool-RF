@@ -43,21 +43,17 @@ export function initTools(canvasWrapper) {
       const img = new Image();
       img.src = reader.result;
       img.onload = () => {
-        const container = document.getElementById('sprite-panel');
         const el = document.createElement('img');
         const id = 'sp' + (++spriteCounter);
         sprites.push({ id, src: img.src, name: file.name });
         el.src = img.src;
         el.dataset.id = id;
-        el.draggable = true;
-        el.addEventListener('dragstart', ev => {
-          ev.dataTransfer.setData('text/plain', id);
-        });
-        el.addEventListener('click', () => {
-          document.querySelectorAll('#sprite-panel img').forEach(i => i.classList.remove('selected'));
-          el.classList.add('selected');
-        });
-        container.appendChild(el);
+        el.classList.add('canvas-sprite');
+        el.style.left = '0px';
+        el.style.top = '0px';
+        makeDraggable(el);
+        const layerEl = document.getElementById('layer-HEAD');
+        if (layerEl) layerEl.appendChild(el);
       };
     };
     reader.readAsDataURL(file);
