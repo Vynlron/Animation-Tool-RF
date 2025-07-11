@@ -101,8 +101,8 @@ export function initTools(canvasWrapper) {
       drag = {
         x: e.clientX,
         y: e.clientY,
-        left: parseInt(el.style.left || '0', 10),
-        top: parseInt(el.style.top || '0', 10)
+        left: parseInt(el.style.left, 10),
+        top: parseInt(el.style.top, 10)
       };
       e.stopPropagation();
     });
