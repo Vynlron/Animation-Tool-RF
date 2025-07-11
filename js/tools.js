@@ -1,10 +1,9 @@
-import { addFrame } from '../studio/studio.js';
+import { addFrame, pan } from '../studio/studio.js';
 
 let isGridVisible = true;
 let isPlaying = true;
 let activeTool = '';
 let isPanning = false;
-let panOffset = { x: 0, y: 0 };
 let panStart = { x: 0, y: 0 };
 let spriteCounter = 0;
 const sprites = [];
@@ -85,9 +84,7 @@ export function initTools(canvasWrapper) {
       const dx = e.clientX - panStart.x;
       const dy = e.clientY - panStart.y;
       panStart = { x: e.clientX, y: e.clientY };
-      panOffset.x += dx;
-      panOffset.y += dy;
-      canvasWrapper.style.transform = `translate(${panOffset.x}px, ${panOffset.y}px)`;
+      pan(dx, dy);
     }
   });
 
