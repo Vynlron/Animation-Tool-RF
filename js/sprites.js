@@ -1,3 +1,5 @@
+import { addFrame } from '../studio/studio.js';
+
 export async function initSprites() {
   const img = new Image();
   img.src = 'assets/realmforge_player-Template.png';
@@ -30,8 +32,9 @@ export async function initSprites() {
   }
 
   for (let i = 0; i < totalTiles; i++) {
-    const sx = (i % cols) * tileSize;
-    const sy = Math.floor(i / cols) * tileSize;
+    const frame = [i % cols, Math.floor(i / cols)];
+    const sx = frame[0] * tileSize;
+    const sy = frame[1] * tileSize;
     const c = document.createElement('canvas');
     c.width = tileSize;
     c.height = tileSize;
@@ -43,10 +46,12 @@ export async function initSprites() {
     el.src = url;
     el.draggable = true;
     el.addEventListener('dragstart', ev => {
-      ev.dataTransfer.setData('text/plain', JSON.stringify({ src: url, cat }));
+      ev.dataTransfer.setData('text/plain', JSON.stringify({ src: url, cat, frame }));
     });
     el.addEventListener('click', () => {
       insertSprite(url, cat, 0, 0);
+      addFrame(frame);
+      if (window.renderTimeline) window.renderTimeline();
     });
     groups[cat].appendChild(el);
   }
@@ -86,5 +91,9 @@ export function enableDrop(wrapper) {
     e.preventDefault();
     const data = JSON.parse(e.dataTransfer.getData('text/plain'));
     insertSprite(data.src, data.cat, e.offsetX, e.offsetY);
+    if (data.frame) {
+      addFrame(data.frame);
+      if (window.renderTimeline) window.renderTimeline();
+    }
   });
 }
