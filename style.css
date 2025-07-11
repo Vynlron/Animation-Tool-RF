@@ -34,6 +34,9 @@ header {
   background: rgba(30, 30, 30, 0.8);
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 h1 {
@@ -75,14 +78,15 @@ h2 {
 
 /* Card grid */
 .card-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 24px;
 }
 
 /* Card style */
 .card, .upload-card {
-  width: 200px;
+  width: 100%;
+  max-width: 220px;
   height: 130px;
   background: linear-gradient(145deg, #2a2a2c, #1f1f21);
   border-radius: 16px;
@@ -218,6 +222,20 @@ canvas {
   background: #2a2a2a;
   border-bottom: 2px solid #333;
   margin-bottom: 30px;
+}
+
+.back-btn {
+  background: #444;
+  border: none;
+  padding: 6px 12px;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.back-btn:hover {
+  background: #5c5c5c;
 }
 
 #studio-animation-name {

@@ -18,6 +18,11 @@ let panStart = { x: 0, y: 0 };
 let spriteCounter = 0;
 const sprites = [];
 
+document.getElementById('back-to-menu').addEventListener('click', () => {
+  studio.style.display = 'none';
+  mainMenu.style.display = 'block';
+});
+
 function setActiveTool(id) {
   activeTool = id;
   document.querySelectorAll('.studio-sidebar button').forEach(btn => {
