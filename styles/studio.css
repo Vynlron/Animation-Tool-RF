@@ -171,6 +171,18 @@
 .canvas-wrapper {
   position: relative;
   background: #111;
+  position: relative;
+}
+
+#layers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sprite-layer {
+  position: absolute;
+  inset: 0;
 }
 
 /* Crosshair lines (optional, now done via JS only) */
@@ -197,6 +209,8 @@
 .canvas-sprite {
   image-rendering: pixelated;
   cursor: move;
+  position: absolute;
+  pointer-events: auto;
 }
 
 .sprite-layer {
