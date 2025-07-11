@@ -15,7 +15,7 @@ export function initMenu({ mainMenu, studio, studioTitle, speedSlider, renderTim
 
         const defaultData = {
           name,
-          image: "PlayerBodyTemplate.png",
+          image: "realmforge_player-Template.png",
           frameWidth: 20,
           frameHeight: 20,
           frames: [[0, 0]],

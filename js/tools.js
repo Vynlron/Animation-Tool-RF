@@ -93,20 +93,6 @@ export function initTools(canvasWrapper) {
   });
 
   canvasWrapper.addEventListener('dragover', (e) => e.preventDefault());
-  canvasWrapper.addEventListener('drop', (e) => {
-    e.preventDefault();
-    const id = e.dataTransfer.getData('text/plain');
-    const sp = sprites.find(s => s.id === id);
-    if (!sp) return;
-    const img = document.createElement('img');
-    img.src = sp.src;
-    img.classList.add('canvas-sprite');
-    img.style.position = 'absolute';
-    img.style.left = e.offsetX + 'px';
-    img.style.top = e.offsetY + 'px';
-    makeDraggable(img);
-    canvasWrapper.appendChild(img);
-  });
 
   function makeDraggable(el) {
     let drag = null;
