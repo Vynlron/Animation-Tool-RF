@@ -24,7 +24,7 @@ export function loadAnimation(data, onReady) {
   img.src = 'assets/' + data.image;
 
   img.onload = () => {
-    rfAni = new RfAni(img, data.frameWidth, data.frameHeight, data.frames, data.speed);
+    rfAni = new RfAni(img, data.frameWidth, data.frameHeight, data.frames, data.speed, data.name || 'Unnamed', data.image);
     if (onReady) onReady();
   };
 
@@ -94,6 +94,30 @@ export function addFrame(frame) {
   if (!rfAni) return;
   const frames = rfAni.frames.concat([frame]);
   rfAni.setFrames(frames);
+}
+
+export function setSpeed(speed) {
+  if (rfAni) {
+    rfAni.setSpeed(speed);
+  }
+}
+
+export function setName(name) {
+  if (rfAni) {
+    rfAni.setName(name);
+  }
+}
+
+export function getAnimationData() {
+  if (!rfAni) return null;
+  return {
+    name: rfAni.name,
+    image: rfAni.imageName,
+    frameWidth: rfAni.frameWidth,
+    frameHeight: rfAni.frameHeight,
+    frames: rfAni.frames.slice(),
+    speed: rfAni.speed
+  };
 }
 
 /**
