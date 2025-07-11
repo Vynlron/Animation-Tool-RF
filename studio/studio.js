@@ -196,7 +196,7 @@ export function removeFrame(index) {
   if (index < 0 || index >= frames.length) return;
   frames.splice(index, 1);
   rfAni.setFrames(frames);
-  if (rfAni.index >= frames.length) rfAni.index = frames.length - 1;
+  if (rfAni.index >= frames.length) rfAni.index = frames.length > 0 ? frames.length - 1 : 0;
 }
 
 export function moveFrame(oldIndex, newIndex) {

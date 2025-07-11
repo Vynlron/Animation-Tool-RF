@@ -12,6 +12,7 @@ export class RfAni {
   }
 
   update(dt) {
+    if (this.frames.length === 0) return;
     this.timer += dt;
     if (this.timer >= this.speed) {
       this.timer = 0;
@@ -20,6 +21,7 @@ export class RfAni {
   }
 
   draw(ctx, x, y, scale = 1) {
+    if (this.frames.length === 0) return;
     const frame = this.frames[this.index];
     const sx = frame[0] * this.frameWidth;
     const sy = frame[1] * this.frameHeight;
