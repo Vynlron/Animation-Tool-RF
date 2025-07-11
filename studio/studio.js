@@ -104,21 +104,25 @@ function drawGrid(ctx, width, height, offsetX, offsetY, zoom) {
 }
 
 // Draws the red (horizontal) and blue (vertical) crosshair lines.
-// The lines are centered at the provided coordinates so we can
-// offset them along with panning.
-function drawCrosshair(ctx, centerX, centerY) {
+// The lines follow the panning/zooming of the grid so that the
+// origin always lines up with the grid's center rather than the
+// screen center.
+function drawCrosshair(ctx, width, height, offsetX, offsetY, zoom) {
+  const centerX = width / 2 + offsetX * zoom;
+  const centerY = height / 2 + offsetY * zoom;
+
   ctx.save();
   ctx.strokeStyle = '#aa0000';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(0, centerY);
-  ctx.lineTo(ctx.canvas.width, centerY);
+  ctx.lineTo(width, centerY);
   ctx.stroke();
 
   ctx.strokeStyle = '#0033cc';
   ctx.beginPath();
   ctx.moveTo(centerX, 0);
-  ctx.lineTo(centerX, ctx.canvas.height);
+  ctx.lineTo(centerX, height);
   ctx.stroke();
   ctx.restore();
 }
@@ -147,9 +151,7 @@ function loop(time) {
   const centerY = canvasRef.height / 2;
 
   drawGrid(ctx, canvasRef.width, canvasRef.height, offsetX, offsetY, zoomLevel);
-  const crossX = centerX + offsetX * zoomLevel;
-  const crossY = centerY + offsetY * zoomLevel;
-  drawCrosshair(ctx, crossX, crossY);
+  drawCrosshair(ctx, canvasRef.width, canvasRef.height, offsetX, offsetY, zoomLevel);
 
   if (rfAni) {
     if (window.isPlaybackEnabled ? window.isPlaybackEnabled() : true) {
