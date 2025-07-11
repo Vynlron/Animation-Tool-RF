@@ -140,16 +140,6 @@ function drawCrosshair(ctx, width, height, offsetX, offsetY, zoom) {
   ctx.restore();
 }
 
-function drawFrameBox(ctx, centerX, centerY, frameWidth, frameHeight, zoom) {
-  const halfW = frameWidth * zoom / 2;
-  const halfH = frameHeight * zoom / 2;
-
-  ctx.save();
-  ctx.strokeStyle = 'cyan';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(centerX - halfW, centerY - halfH, frameWidth * zoom, frameHeight * zoom);
-  ctx.restore();
-}
 
 function drawHeightGuide(ctx, centerX, centerY, frameWidth, frameHeight, zoom) {
   const halfW = frameWidth * zoom / 2;
@@ -210,7 +200,6 @@ function loop(time) {
 
     // Keep the preview sprite anchored to the screen center so panning and
     // zooming only affect the grid/crosshair background.
-    drawFrameBox(ctx, centerX, centerY, rfAni.frameWidth, rfAni.frameHeight, zoomLevel);
     drawHeightGuide(ctx, centerX, centerY, rfAni.frameWidth, rfAni.frameHeight, zoomLevel);
 
     rfAni.draw(ctx, centerX, centerY, zoomLevel);
