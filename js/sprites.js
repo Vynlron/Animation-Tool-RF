@@ -12,6 +12,8 @@ export async function initSprites() {
   const panel = document.getElementById('sprite-panel');
   panel.innerHTML = '';
 
+  let isDraggingSprite = false;
+
   const categories = {
     HEAD: [0, cols],
     BODY: [cols, cols * 2]
@@ -46,9 +48,15 @@ export async function initSprites() {
     el.src = url;
     el.draggable = true;
     el.addEventListener('dragstart', ev => {
+      isDraggingSprite = true;
       ev.dataTransfer.setData('text/plain', JSON.stringify({ src: url, cat, frame }));
     });
+    el.addEventListener('dragend', () => {
+      // allow click events after drag to be ignored
+      setTimeout(() => { isDraggingSprite = false; }, 0);
+    });
     el.addEventListener('click', () => {
+      if (isDraggingSprite) return;
       insertSprite(url, cat, 0, 0);
       addFrame(frame);
       if (window.renderTimeline) window.renderTimeline();
