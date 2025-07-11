@@ -5,6 +5,17 @@
   box-sizing: border-box;
 }
 
+button,
+input {
+  outline: none;
+}
+
+button:hover,
+button:focus,
+input:focus {
+  outline: 2px solid #888;
+}
+
 body {
   background: linear-gradient(to right, #1b1b1d, #222226);
   color: #eee;
@@ -335,6 +346,9 @@ canvas#preview {
 .studio-sidebar button:hover {
   background: #666;
 }
+.studio-sidebar button.active {
+  background: #888;
+}
 
 /* Main canvas area */
 .studio-main {
@@ -347,11 +361,14 @@ canvas#preview {
 }
 
 .canvas-wrapper {
+  --grid-opacity: 0.3;
   position: relative;
   border: 3px solid #333;
   border-radius: 10px;
   box-shadow: 0 0 10px #000;
   background: conic-gradient(#1c1c1c 0deg 90deg, #181818 90deg 180deg) 0 0 / 20px 20px;
+  overflow: hidden;
+  transform: translate(0, 0);
 }
 
 canvas#preview {
@@ -365,7 +382,8 @@ canvas#preview {
 .canvas-wrapper::after {
   content: '';
   position: absolute;
-  background: rgba(255, 0, 0, 0.4);
+  background: rgba(255, 0, 0, var(--grid-opacity));
+  pointer-events: none;
 }
 .canvas-wrapper::before {
   width: 1px;
@@ -378,6 +396,11 @@ canvas#preview {
   width: 100%;
   top: 50%;
   left: 0;
+}
+
+.canvas-sprite {
+  image-rendering: pixelated;
+  cursor: move;
 }
 
 /* Sprite panel right side */
@@ -413,8 +436,22 @@ canvas#preview {
   cursor: pointer;
   transition: transform 0.2s;
 }
+.sprite-grid img.selected {
+  border-color: #aaa;
+}
 
 .sprite-grid img:hover {
   transform: scale(1.05);
   border-color: #888;
+}
+
+/* Timeline placeholder */
+.timeline-placeholder {
+  height: 120px;
+  border-top: 1px solid #333;
+  background: #202020;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

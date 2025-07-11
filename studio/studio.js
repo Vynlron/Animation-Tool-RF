@@ -33,6 +33,12 @@ export function loadAnimation(data, onReady) {
   };
 }
 
+export function addFrame(frame) {
+  if (!rfAni) return;
+  const frames = rfAni.frames.concat([frame]);
+  rfAni.setFrames(frames);
+}
+
 /**
  * Main animation loop
  */
@@ -41,7 +47,9 @@ function loop(time) {
   lastTime = time;
 
   if (rfAni && ctx) {
-    rfAni.update(dt);
+    if (window.isPlaybackEnabled ? window.isPlaybackEnabled() : true) {
+      rfAni.update(dt);
+    }
     ctx.clearRect(0, 0, 160, 160);
     rfAni.draw(ctx, 40, 60, 2);
   }
