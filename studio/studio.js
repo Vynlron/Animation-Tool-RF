@@ -33,6 +33,63 @@ export function loadAnimation(data, onReady) {
   };
 }
 
+export function getFrames() {
+  return rfAni ? rfAni.frames : [];
+}
+
+export function setFrameIndex(index) {
+  if (rfAni) {
+    const max = rfAni.frames.length - 1;
+    rfAni.index = Math.max(0, Math.min(index, max));
+  }
+}
+
+export function removeFrame(index) {
+  if (!rfAni) return;
+  const frames = rfAni.frames.slice();
+  if (index < 0 || index >= frames.length) return;
+  frames.splice(index, 1);
+  rfAni.setFrames(frames);
+  if (rfAni.index >= frames.length) {
+    rfAni.index = frames.length - 1;
+  }
+}
+
+export function moveFrame(oldIndex, newIndex) {
+  if (!rfAni) return;
+  const frames = rfAni.frames.slice();
+  if (oldIndex < 0 || oldIndex >= frames.length) return;
+  if (newIndex < 0 || newIndex >= frames.length) return;
+  const [f] = frames.splice(oldIndex, 1);
+  frames.splice(newIndex, 0, f);
+  rfAni.setFrames(frames);
+  rfAni.index = newIndex;
+}
+
+export function createFramePreview(index, scale = 2) {
+  if (!rfAni) return null;
+  const frame = rfAni.frames[index];
+  if (!frame) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = rfAni.frameWidth * scale;
+  canvas.height = rfAni.frameHeight * scale;
+  const c = canvas.getContext('2d');
+  const sx = frame[0] * rfAni.frameWidth;
+  const sy = frame[1] * rfAni.frameHeight;
+  c.drawImage(
+    rfAni.image,
+    sx,
+    sy,
+    rfAni.frameWidth,
+    rfAni.frameHeight,
+    0,
+    0,
+    rfAni.frameWidth * scale,
+    rfAni.frameHeight * scale
+  );
+  return canvas;
+}
+
 export function addFrame(frame) {
   if (!rfAni) return;
   const frames = rfAni.frames.concat([frame]);

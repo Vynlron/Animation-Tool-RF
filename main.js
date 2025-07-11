@@ -1,4 +1,4 @@
-import { loadAnimation, initStudio, addFrame } from './studio/studio.js';
+import { loadAnimation, initStudio, addFrame, getFrames, setFrameIndex, removeFrame, moveFrame, createFramePreview } from './studio/studio.js';
 import { showModal } from './ui/modal.js';
 
 const canvas = document.getElementById('preview');
@@ -8,6 +8,12 @@ const mainMenu = document.getElementById('main-menu');
 const studio = document.getElementById('studio');
 const studioTitle = document.getElementById('studio-animation-name');
 const canvasWrapper = document.querySelector('.canvas-wrapper');
+const frameList = document.getElementById('frame-list');
+const moveLeftBtn = document.getElementById('frame-left-btn');
+const moveRightBtn = document.getElementById('frame-right-btn');
+const deleteFrameBtn = document.getElementById('frame-delete-btn');
+
+let selectedFrame = 0;
 
 let isGridVisible = true;
 let isPlaying = true;
@@ -51,7 +57,7 @@ document.getElementById('new-animation').addEventListener('click', () => {
         speed: 200
       };
 
-      loadAnimation(defaultData, () => {});
+      loadAnimation(defaultData, renderTimeline);
     }
   });
 });
@@ -68,7 +74,7 @@ document.getElementById('rfani-loader').addEventListener('change', (e) => {
       mainMenu.style.display = 'none';
       studio.style.display = 'block';
       studioTitle.textContent = data.name || "Unnamed";
-      loadAnimation(data);
+      loadAnimation(data, renderTimeline);
     } catch {
       alert('Invalid .rfani file!');
     }
@@ -125,6 +131,7 @@ document.getElementById('sprite-loader').addEventListener('change', (e) => {
 
 document.getElementById('tool-add-frame').addEventListener('click', () => {
   addFrame([0, 0]);
+  renderTimeline();
 });
 
 document.getElementById('tool-pan').addEventListener('click', () => {
@@ -195,6 +202,62 @@ function makeDraggable(el) {
     drag = null;
   });
 }
+
+function renderTimeline() {
+  frameList.innerHTML = '';
+  const frames = getFrames();
+  frames.forEach((_, idx) => {
+    const item = document.createElement('div');
+    item.className = 'frame-item';
+    if (idx === selectedFrame) item.classList.add('selected');
+    const thumb = createFramePreview(idx, 2);
+    if (thumb) item.appendChild(thumb);
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '✖';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeFrame(idx);
+      if (selectedFrame >= getFrames().length) {
+        selectedFrame = getFrames().length - 1;
+      }
+      renderTimeline();
+    });
+    item.appendChild(delBtn);
+    item.addEventListener('click', () => {
+      selectedFrame = idx;
+      setFrameIndex(idx);
+      renderTimeline();
+    });
+    frameList.appendChild(item);
+  });
+}
+
+moveLeftBtn.addEventListener('click', () => {
+  if (selectedFrame > 0) {
+    moveFrame(selectedFrame, selectedFrame - 1);
+    selectedFrame--;
+    renderTimeline();
+  }
+});
+
+moveRightBtn.addEventListener('click', () => {
+  if (selectedFrame < getFrames().length - 1) {
+    moveFrame(selectedFrame, selectedFrame + 1);
+    selectedFrame++;
+    renderTimeline();
+  }
+});
+
+deleteFrameBtn.addEventListener('click', () => {
+  removeFrame(selectedFrame);
+  if (selectedFrame >= getFrames().length) {
+    selectedFrame = getFrames().length - 1;
+  }
+  renderTimeline();
+});
+
+// Initialize empty timeline on load
+renderTimeline();
 
 // Provide shared control values
 export function isPlaybackEnabled() {
