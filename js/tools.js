@@ -8,32 +8,6 @@ let panStart = { x: 0, y: 0 };
 let spriteCounter = 0;
 const sprites = [];
 
-function makeDraggable(el) {
-  let drag = null;
-  el.addEventListener('mousedown', (e) => {
-    if (activeTool === 'tool-pan') return;
-    drag = {
-      x: e.clientX,
-      y: e.clientY,
-      left: parseInt(el.style.left || '0', 10),
-      top: parseInt(el.style.top || '0', 10)
-    };
-    e.stopPropagation();
-  });
-
-  document.addEventListener('mousemove', (e) => {
-    if (!drag) return;
-    const dx = e.clientX - drag.x;
-    const dy = e.clientY - drag.y;
-    el.style.left = drag.left + dx + 'px';
-    el.style.top = drag.top + dy + 'px';
-  });
-
-  document.addEventListener('mouseup', () => {
-    drag = null;
-  });
-}
-
 export function initTools(canvasWrapper) {
   function setActiveTool(id) {
     activeTool = id;
@@ -84,7 +58,6 @@ export function initTools(canvasWrapper) {
           el.classList.add('selected');
         });
         container.appendChild(el);
-        makeDraggable(el); // Make the new sprite draggable
       };
     };
     reader.readAsDataURL(file);
@@ -121,6 +94,31 @@ export function initTools(canvasWrapper) {
 
   canvasWrapper.addEventListener('dragover', (e) => e.preventDefault());
 
+  function makeDraggable(el) {
+    let drag = null;
+    el.addEventListener('mousedown', (e) => {
+      if (activeTool === 'tool-pan') return;
+      drag = {
+        x: e.clientX,
+        y: e.clientY,
+        left: parseInt(el.style.left || '0', 10),
+        top: parseInt(el.style.top || '0', 10)
+      };
+      e.stopPropagation();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x;
+      const dy = e.clientY - drag.y;
+      el.style.left = drag.left + dx + 'px';
+      el.style.top = drag.top + dy + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      drag = null;
+    });
+  }
 }
 
 export function isPlaybackEnabled() {
