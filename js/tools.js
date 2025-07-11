@@ -18,10 +18,10 @@ export function initTools(canvasWrapper) {
 
   setActiveTool('tool-pan');
 
-  document.getElementById('tool-toggle-grid').addEventListener('click', () => {
-    isGridVisible = !isGridVisible;
-    canvasWrapper.style.setProperty('--grid-opacity', isGridVisible ? '0.3' : '0');
-  });
+    document.getElementById('tool-toggle-grid').addEventListener('click', () => {
+      isGridVisible = !isGridVisible;
+      canvasWrapper.style.setProperty('--grid-opacity', isGridVisible ? '0.3' : '0');
+    });
 
   const playBtn = document.getElementById('tool-toggle-play');
   playBtn.textContent = isPlaying ? '⏸️' : '▶️';
@@ -123,4 +123,8 @@ export function initTools(canvasWrapper) {
 
 export function isPlaybackEnabled() {
   return isPlaying;
+}
+
+export function isGridEnabled() {
+  return isGridVisible;
 }
