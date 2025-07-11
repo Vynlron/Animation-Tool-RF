@@ -25,12 +25,18 @@ export class RfAni {
     const frame = this.frames[this.index];
     const sx = frame[0] * this.frameWidth;
     const sy = frame[1] * this.frameHeight;
+    const w = this.frameWidth * scale;
+    const h = this.frameHeight * scale;
     ctx.drawImage(
       this.image,
-      sx, sy,
-      this.frameWidth, this.frameHeight,
-      x, y,
-      this.frameWidth * scale, this.frameHeight * scale
+      sx,
+      sy,
+      this.frameWidth,
+      this.frameHeight,
+      x - w / 2,
+      y - h / 2,
+      w,
+      h
     );
   }
 
