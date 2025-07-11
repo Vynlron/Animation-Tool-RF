@@ -103,6 +103,9 @@ function drawGrid(ctx, width, height, offsetX, offsetY, zoom) {
   ctx.restore();
 }
 
+// Draws the red (horizontal) and blue (vertical) crosshair lines.
+// The lines are centered at the provided coordinates so we can
+// offset them along with panning.
 function drawCrosshair(ctx, centerX, centerY) {
   ctx.save();
   ctx.strokeStyle = '#aa0000';
@@ -144,7 +147,9 @@ function loop(time) {
   const centerY = canvasRef.height / 2;
 
   drawGrid(ctx, canvasRef.width, canvasRef.height, offsetX, offsetY, zoomLevel);
-  drawCrosshair(ctx, centerX, centerY);
+  const crossX = centerX + offsetX * zoomLevel;
+  const crossY = centerY + offsetY * zoomLevel;
+  drawCrosshair(ctx, crossX, crossY);
 
   if (rfAni) {
     if (window.isPlaybackEnabled ? window.isPlaybackEnabled() : true) {
