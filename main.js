@@ -1,4 +1,4 @@
-import { loadAnimation, initStudio, addFrame } from './studio/studio.js';
+import { loadAnimation, initStudio, addFrame, removeFrame, moveFrame, setSpeed, getAnimationData } from './studio/studio.js';
 import { showModal } from './ui/modal.js';
 
 const canvas = document.getElementById('preview');
@@ -17,6 +17,9 @@ let panOffset = { x: 0, y: 0 };
 let panStart = { x: 0, y: 0 };
 let spriteCounter = 0;
 const sprites = [];
+let selectedFrame = 0;
+const frameTimeline = document.getElementById('frame-timeline');
+const speedInput = document.getElementById('speed-input');
 
 document.getElementById('back-to-menu').addEventListener('click', () => {
   studio.style.display = 'none';
@@ -52,6 +55,9 @@ document.getElementById('new-animation').addEventListener('click', () => {
       };
 
       loadAnimation(defaultData, () => {});
+      speedInput.value = defaultData.speed;
+      selectedFrame = 0;
+      refreshTimeline();
     }
   });
 });
@@ -69,6 +75,9 @@ document.getElementById('rfani-loader').addEventListener('change', (e) => {
       studio.style.display = 'block';
       studioTitle.textContent = data.name || "Unnamed";
       loadAnimation(data);
+      speedInput.value = data.speed;
+      selectedFrame = 0;
+      refreshTimeline();
     } catch {
       alert('Invalid .rfani file!');
     }
@@ -125,6 +134,7 @@ document.getElementById('sprite-loader').addEventListener('change', (e) => {
 
 document.getElementById('tool-add-frame').addEventListener('click', () => {
   addFrame([0, 0]);
+  refreshTimeline();
 });
 
 document.getElementById('tool-pan').addEventListener('click', () => {
@@ -195,6 +205,61 @@ function makeDraggable(el) {
     drag = null;
   });
 }
+
+function refreshTimeline() {
+  const data = getAnimationData(studioTitle.textContent);
+  if (!data) return;
+  frameTimeline.innerHTML = '';
+  data.frames.forEach((f, idx) => {
+    const item = document.createElement('div');
+    item.className = 'frame-item';
+    if (idx === selectedFrame) item.classList.add('selected');
+    item.textContent = idx + 1;
+    item.draggable = true;
+    item.addEventListener('click', () => {
+      selectedFrame = idx;
+      refreshTimeline();
+    });
+    item.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('from', idx);
+    });
+    item.addEventListener('dragover', e => e.preventDefault());
+    item.addEventListener('drop', e => {
+      const from = parseInt(e.dataTransfer.getData('from'), 10);
+      moveFrame(from, idx);
+      selectedFrame = idx;
+      refreshTimeline();
+    });
+    const del = document.createElement('button');
+    del.textContent = '✖';
+    del.className = 'frame-delete';
+    del.addEventListener('click', ev => {
+      ev.stopPropagation();
+      removeFrame(idx);
+      if (selectedFrame >= data.frames.length - 1) selectedFrame = data.frames.length - 2;
+      if (selectedFrame < 0) selectedFrame = 0;
+      refreshTimeline();
+    });
+    item.appendChild(del);
+    frameTimeline.appendChild(item);
+  });
+}
+
+speedInput.addEventListener('change', () => {
+  const val = parseInt(speedInput.value, 10);
+  if (!isNaN(val)) setSpeed(val);
+});
+
+document.getElementById('export-rfani').addEventListener('click', () => {
+  const data = getAnimationData(studioTitle.textContent);
+  if (!data) return;
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (data.name || 'animation') + '.rfani';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
 
 // Provide shared control values
 export function isPlaybackEnabled() {

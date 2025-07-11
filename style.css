@@ -463,13 +463,63 @@ canvas#preview {
   border-color: #888;
 }
 
-/* Timeline placeholder */
-.timeline-placeholder {
-  height: 120px;
+/* Timeline */
+.timeline {
   border-top: 1px solid #333;
   background: #202020;
-  color: #888;
+  padding: 10px;
+  color: #ddd;
+}
+
+.timeline-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.frame-timeline {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.frame-item {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  background: #333;
+  border: 2px solid #444;
+  border-radius: 4px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 12px;
+  color: #eee;
+  cursor: pointer;
+}
+
+.frame-item.selected {
+  border-color: #aaa;
+}
+
+.frame-item .frame-delete {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #722;
+  color: #fff;
+  border: none;
+  font-size: 10px;
+  display: none;
+  cursor: pointer;
+}
+
+.frame-item:hover .frame-delete {
+  display: block;
 }
