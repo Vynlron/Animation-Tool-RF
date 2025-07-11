@@ -12,6 +12,9 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "live-server": "^1.2.0"
+    "live-server": "^1.2.2"
+  },
+  "dependencies": {
+    "sharp": "^0.34.3"
   }
 }
