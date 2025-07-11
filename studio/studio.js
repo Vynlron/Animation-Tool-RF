@@ -7,14 +7,22 @@ let zoomLevel = 2;
 const minZoom = 0.5;
 const maxZoom = 6;
 let canvasRef = null;
+let layersEl = null;
 
 // Infinite canvas state
 let offsetX = 0;
 let offsetY = 0;
 
+function updateLayerTransform() {
+  if (!layersEl) return;
+  layersEl.style.transformOrigin = 'center center';
+  layersEl.style.transform = `translate(${offsetX * zoomLevel}px, ${offsetY * zoomLevel}px) scale(${zoomLevel})`;
+}
+
 export function pan(dx, dy) {
   offsetX += dx / zoomLevel;
   offsetY += dy / zoomLevel;
+  updateLayerTransform();
 }
 
 /**
@@ -22,15 +30,19 @@ export function pan(dx, dy) {
  */
 export function initStudio(canvasElement) {
   canvasRef = canvasElement;
+  layersEl = document.getElementById('layers');
   canvasElement.width = window.innerWidth;
   canvasElement.height = window.innerHeight;
   ctx = canvasElement.getContext('2d');
   lastTime = performance.now();
 
+  updateLayerTransform();
+
   // Resize canvas on window change
   window.addEventListener('resize', () => {
     canvasRef.width = window.innerWidth;
     canvasRef.height = window.innerHeight;
+    updateLayerTransform();
   });
 
   // Mouse wheel zoom
@@ -43,6 +55,7 @@ export function initStudio(canvasElement) {
       zoomLevel = Math.min(maxZoom, zoomLevel + 0.1);
     }
     zoomLevel = Math.round(zoomLevel * 10) / 10;
+    updateLayerTransform();
   });
 
   // Pan interactions are handled by the tools module
