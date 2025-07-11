@@ -141,40 +141,6 @@ function drawCrosshair(ctx, width, height, offsetX, offsetY, zoom) {
 }
 
 
-function drawHeightGuide(ctx, centerX, centerY, frameWidth, frameHeight, zoom) {
-  const halfW = frameWidth * zoom / 2;
-  const halfH = frameHeight * zoom / 2;
-  const x = centerX + halfW + 10;
-  const top = centerY - halfH;
-  const bottom = centerY + halfH;
-
-  ctx.save();
-  ctx.strokeStyle = 'yellow';
-  ctx.fillStyle = 'yellow';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(x, top);
-  ctx.lineTo(x, bottom);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(x - 3, top);
-  ctx.lineTo(x + 3, top);
-  ctx.lineTo(x, top - 5);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.moveTo(x - 3, bottom);
-  ctx.lineTo(x + 3, bottom);
-  ctx.lineTo(x, bottom + 5);
-  ctx.fill();
-
-  ctx.font = '12px sans-serif';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(frameHeight + 'px', x + 6, (top + bottom) / 2);
-  ctx.restore();
-}
 
 /**
  * Main animation loop
@@ -198,9 +164,7 @@ function loop(time) {
       rfAni.update(dt);
     }
 
-    // Keep the preview sprite anchored to the screen center so panning and
-    // zooming only affect the grid/crosshair background.
-    drawHeightGuide(ctx, centerX, centerY, rfAni.frameWidth, rfAni.frameHeight, zoomLevel);
+
 
     rfAni.draw(ctx, centerX, centerY, zoomLevel);
   }
