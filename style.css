@@ -243,6 +243,38 @@ canvas {
   color: #f0f0f0;
 }
 
+.studio-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.studio-controls button {
+  background: #444;
+  border: none;
+  padding: 6px 10px;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.studio-controls button:hover {
+  background: #5c5c5c;
+}
+
+.studio-controls .speed-label {
+  color: #ccc;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.studio-controls input[type="range"] {
+  accent-color: #888;
+}
+
 /* Studio Layout */
 .studio-layout {
   display: flex;

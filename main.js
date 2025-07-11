@@ -1,4 +1,4 @@
-import { loadAnimation, initStudio, addFrame, getFrames, setFrameIndex, removeFrame, moveFrame, createFramePreview } from './studio/studio.js';
+import { loadAnimation, initStudio, addFrame, getFrames, setFrameIndex, removeFrame, moveFrame, createFramePreview, setSpeed, setName, getAnimationData } from './studio/studio.js';
 import { showModal } from './ui/modal.js';
 
 const canvas = document.getElementById('preview');
@@ -7,6 +7,9 @@ initStudio(canvas);
 const mainMenu = document.getElementById('main-menu');
 const studio = document.getElementById('studio');
 const studioTitle = document.getElementById('studio-animation-name');
+const renameBtn = document.getElementById('rename-animation-btn');
+const exportBtn = document.getElementById('export-btn');
+const speedSlider = document.getElementById('speed-slider');
 const canvasWrapper = document.querySelector('.canvas-wrapper');
 const frameList = document.getElementById('frame-list');
 const moveLeftBtn = document.getElementById('frame-left-btn');
@@ -38,6 +41,32 @@ function setActiveTool(id) {
 
 setActiveTool('tool-pan');
 
+renameBtn.addEventListener('click', () => {
+  showModal({
+    title: 'Rename animation',
+    defaultValue: studioTitle.textContent,
+    onConfirm: (name) => {
+      studioTitle.textContent = name;
+      setName(name);
+    }
+  });
+});
+
+exportBtn.addEventListener('click', () => {
+  const data = getAnimationData();
+  if (!data) return;
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (data.name || 'animation') + '.rfani';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+speedSlider.addEventListener('input', (e) => {
+  setSpeed(parseInt(e.target.value, 10));
+});
+
 // New Animation Modal
 document.getElementById('new-animation').addEventListener('click', () => {
   showModal({
@@ -58,6 +87,8 @@ document.getElementById('new-animation').addEventListener('click', () => {
       };
 
       loadAnimation(defaultData, renderTimeline);
+      speedSlider.value = defaultData.speed;
+      setSpeed(defaultData.speed);
     }
   });
 });
@@ -75,6 +106,10 @@ document.getElementById('rfani-loader').addEventListener('change', (e) => {
       studio.style.display = 'block';
       studioTitle.textContent = data.name || "Unnamed";
       loadAnimation(data, renderTimeline);
+      if (typeof data.speed === 'number') {
+        speedSlider.value = data.speed;
+        setSpeed(data.speed);
+      }
     } catch {
       alert('Invalid .rfani file!');
     }

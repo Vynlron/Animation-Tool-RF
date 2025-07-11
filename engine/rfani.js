@@ -1,6 +1,8 @@
 export class RfAni {
-  constructor(image, frameWidth, frameHeight, frames = [], speed = 200) {
+  constructor(image, frameWidth, frameHeight, frames = [], speed = 200, name = 'Unnamed', imageName = '') {
     this.image = image;
+    this.imageName = imageName;
+    this.name = name;
     this.frameWidth = frameWidth;
     this.frameHeight = frameHeight;
     this.frames = frames;
@@ -38,5 +40,9 @@ export class RfAni {
 
   setSpeed(speed) {
     this.speed = speed;
+  }
+
+  setName(name) {
+    this.name = name;
   }
 }
