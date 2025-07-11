@@ -158,7 +158,13 @@ function loop(time) {
       rfAni.update(dt);
     }
 
-    drawFrameBox(ctx, centerX, centerY, rfAni.frameWidth, rfAni.frameHeight, zoomLevel);
+    // Draw the frame box so that it follows the grid's origin when panning
+    // and zooming, just like the red/blue crosshair lines and the sprite
+    // rendering. This keeps the cyan box aligned with the grid instead of
+    // being fixed to the screen center.
+    const boxX = centerX + offsetX * zoomLevel;
+    const boxY = centerY + offsetY * zoomLevel;
+    drawFrameBox(ctx, boxX, boxY, rfAni.frameWidth, rfAni.frameHeight, zoomLevel);
 
     const drawX = centerX + offsetX * zoomLevel;
     const drawY = centerY + offsetY * zoomLevel;
