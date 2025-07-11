@@ -65,7 +65,13 @@
         <div class="sprite-grid" id="sprite-panel"></div>
       </div>
     </div>
-    <div class="timeline-placeholder">Frame timeline coming soon</div>
+    <div class="timeline">
+      <div class="timeline-controls">
+        <button id="export-rfani" type="button">💾 Export</button>
+        <label>Speed <input id="speed-input" type="number" value="200" min="50" step="50"> ms</label>
+      </div>
+      <div id="frame-timeline" class="frame-timeline"></div>
+    </div>
   </main>
 
   <!-- General Modal -->
