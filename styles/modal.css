@@ -1,0 +1,63 @@
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-box {
+  background: #2b2b2b;
+  padding: 30px 25px;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+  text-align: center;
+  min-width: 300px;
+}
+
+.modal-box h3 {
+  font-size: 18px;
+  margin-bottom: 15px;
+  color: #eee;
+}
+
+.modal-box input {
+  width: 100%;
+  padding: 10px;
+  font-size: 15px;
+  margin-bottom: 20px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #1d1d1d;
+  color: #fff;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.modal-buttons button {
+  flex: 1;
+  padding: 8px;
+  background: #3b3b3b;
+  color: #eee;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.modal-buttons button:hover {
+  background: #505050;
+}

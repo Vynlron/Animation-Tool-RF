@@ -1,0 +1,27 @@
+/* Reset + Base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+button,
+input {
+  outline: none;
+}
+
+button:hover,
+button:focus,
+input:focus {
+  outline: 2px solid #888;
+}
+
+body {
+  background: linear-gradient(to right, #1b1b1d, #222226);
+  color: #eee;
+  font-family: 'Segoe UI', 'Roboto', sans-serif;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
