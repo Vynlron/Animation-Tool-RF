@@ -15,6 +15,11 @@ let isDragging = false;
 let dragStartX = 0;
 let dragStartY = 0;
 
+export function pan(dx, dy) {
+  offsetX += dx / zoomLevel;
+  offsetY += dy / zoomLevel;
+}
+
 /**
  * Initialize studio with a canvas element.
  */
@@ -58,8 +63,7 @@ export function initStudio(canvasElement) {
     if (!isDragging) return;
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
-    offsetX += dx / zoomLevel;
-    offsetY += dy / zoomLevel;
+    pan(dx, dy);
     dragStartX = e.clientX;
     dragStartY = e.clientY;
   });
@@ -70,34 +74,51 @@ export function initStudio(canvasElement) {
 /**
  * Draws a scrolling background grid that moves with pan & zoom.
  */
-function drawGrid(ctx, width, height, offsetX, offsetY, zoom) {
+function drawGrid(ctx, width, height, zoom) {
   const baseSize = 10;
   const gridSize = baseSize * zoom;
   const majorLineEvery = 5;
-
-  const startX = -((offsetX * zoom) % gridSize);
-  const startY = -((offsetY * zoom) % gridSize);
-  const cols = Math.ceil(width / gridSize);
-  const rows = Math.ceil(height / gridSize);
+  const centerX = width / 2;
+  const centerY = height / 2;
 
   ctx.save();
-  for (let i = 0; i <= cols; i++) {
-    const x = startX + i * gridSize;
+  let index = 1;
+  for (let x = centerX + gridSize; x <= width; x += gridSize, index++) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
-    ctx.strokeStyle = (i % majorLineEvery === 0) ? '#444' : '#2a2a2a';
-    ctx.lineWidth = (i % majorLineEvery === 0) ? 1.3 : 0.5;
+    ctx.strokeStyle = (index % majorLineEvery === 0) ? '#444' : '#2a2a2a';
+    ctx.lineWidth = (index % majorLineEvery === 0) ? 1.3 : 0.5;
     ctx.stroke();
   }
 
-  for (let j = 0; j <= rows; j++) {
-    const y = startY + j * gridSize;
+  index = 1;
+  for (let x = centerX - gridSize; x >= 0; x -= gridSize, index++) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.strokeStyle = (index % majorLineEvery === 0) ? '#444' : '#2a2a2a';
+    ctx.lineWidth = (index % majorLineEvery === 0) ? 1.3 : 0.5;
+    ctx.stroke();
+  }
+
+  index = 1;
+  for (let y = centerY + gridSize; y <= height; y += gridSize, index++) {
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
-    ctx.strokeStyle = (j % majorLineEvery === 0) ? '#444' : '#2a2a2a';
-    ctx.lineWidth = (j % majorLineEvery === 0) ? 1.3 : 0.5;
+    ctx.strokeStyle = (index % majorLineEvery === 0) ? '#444' : '#2a2a2a';
+    ctx.lineWidth = (index % majorLineEvery === 0) ? 1.3 : 0.5;
+    ctx.stroke();
+  }
+
+  index = 1;
+  for (let y = centerY - gridSize; y >= 0; y -= gridSize, index++) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.strokeStyle = (index % majorLineEvery === 0) ? '#444' : '#2a2a2a';
+    ctx.lineWidth = (index % majorLineEvery === 0) ? 1.3 : 0.5;
     ctx.stroke();
   }
   ctx.restore();
@@ -143,7 +164,7 @@ function loop(time) {
   const centerX = canvasRef.width / 2;
   const centerY = canvasRef.height / 2;
 
-  drawGrid(ctx, canvasRef.width, canvasRef.height, offsetX, offsetY, zoomLevel);
+  drawGrid(ctx, canvasRef.width, canvasRef.height, zoomLevel);
   drawCrosshair(ctx, centerX, centerY);
 
   if (rfAni) {
