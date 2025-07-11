@@ -1,0 +1,90 @@
+/* Main layout */
+main {
+  padding: 30px 60px;
+}
+
+section {
+  margin-bottom: 40px;
+}
+
+h2 {
+  font-size: 18px;
+  margin-bottom: 12px;
+  color: #ccc;
+  font-weight: 400;
+}
+
+/* Card grid */
+.card-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+}
+
+/* Card style */
+.card, .upload-card {
+  width: 100%;
+  max-width: 220px;
+  height: 130px;
+  background: linear-gradient(145deg, #2a2a2c, #1f1f21);
+  border-radius: 16px;
+  border: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: inherit;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.card:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+}
+
+.card:hover::before {
+  opacity: 0.15;
+}
+
+.icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+  color: #f0f0f0;
+}
+
+.label {
+  font-size: 14px;
+  color: #ccc;
+  text-align: center;
+}
+
+/* Disabled card */
+.card.disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Canvas preview */
+canvas {
+  display: block;
+  margin: 40px auto 20px;
+  border-radius: 10px;
+  border: 3px solid #3c3c3c;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  background: #111;
+  image-rendering: pixelated;
+}
