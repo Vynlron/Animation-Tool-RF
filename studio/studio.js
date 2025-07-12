@@ -268,3 +268,7 @@ export function getSpriteAtPoint(x, y) {
   }
   return null;
 }
+
+export function setRfAni(instance) {
+  rfAni = instance;
+}

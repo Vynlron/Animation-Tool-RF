@@ -305,3 +305,67 @@ canvas#preview:active {
   left: 0;
 }
 
+.timeline-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #111;
+  padding: 10px;
+  overflow-x: auto;
+  white-space: nowrap;
+  border-top: 2px solid #333;
+  z-index: 100;
+}
+
+#timeline-frames {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.timeline-frame {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  padding: 5px;
+  border-radius: 6px;
+  width: 64px;
+  text-align: center;
+  font-size: 12px;
+  color: #eee;
+}
+
+.preview {
+  display: block;
+  margin: 0 auto 4px;
+  border: 1px solid #444;
+  background: #000;
+}
+
+.frame-index {
+  margin-top: 2px;
+  color: #999;
+}
+
+.frame-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.frame-controls button {
+  font-size: 12px;
+  padding: 2px 4px;
+  background: #222;
+  border: 1px solid #444;
+  color: #ccc;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.frame-controls button:hover {
+  background: #333;
+  color: white;
+}

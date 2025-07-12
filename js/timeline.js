@@ -1,69 +1,92 @@
-import { addFrame, getFrames, setFrameIndex, removeFrame, moveFrame, createFramePreview } from '../studio/studio.js';
-
-let selectedFrame = 0;
-let frameList;
-let moveLeftBtn;
-let moveRightBtn;
-let deleteFrameBtn;
-
-export function initTimeline() {
-  frameList = document.getElementById('frame-list');
-  moveLeftBtn = document.getElementById('frame-left-btn');
-  moveRightBtn = document.getElementById('frame-right-btn');
-  deleteFrameBtn = document.getElementById('frame-delete-btn');
-
-  moveLeftBtn.addEventListener('click', () => {
-    if (selectedFrame > 0) {
-      moveFrame(selectedFrame, selectedFrame - 1);
-      selectedFrame--;
-      renderTimeline();
-    }
-  });
-
-  moveRightBtn.addEventListener('click', () => {
-    if (selectedFrame < getFrames().length - 1) {
-      moveFrame(selectedFrame, selectedFrame + 1);
-      selectedFrame++;
-      renderTimeline();
-    }
-  });
-
-  deleteFrameBtn.addEventListener('click', () => {
-    removeFrame(selectedFrame);
-    if (selectedFrame >= getFrames().length) {
-      selectedFrame = getFrames().length - 1;
-    }
-    renderTimeline();
-  });
-
-  renderTimeline();
-}
+import { getFrames, setFrameIndex, removeFrame, moveFrame, createFramePreview, addFrame } from '../studio/studio.js';
 
 export function renderTimeline() {
-  frameList.innerHTML = '';
+  const container = document.getElementById('timeline-frames');
+  if (!container) return;
+  container.innerHTML = '';
+
   const frames = getFrames();
-  frames.forEach((_, idx) => {
+  frames.forEach((frame, index) => {
     const item = document.createElement('div');
-    item.className = 'frame-item';
-    if (idx === selectedFrame) item.classList.add('selected');
-    const thumb = createFramePreview(idx, 2);
-    if (thumb) item.appendChild(thumb);
-    const delBtn = document.createElement('button');
-    delBtn.textContent = '✖';
-    delBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      removeFrame(idx);
-      if (selectedFrame >= getFrames().length) {
-        selectedFrame = getFrames().length - 1;
+    item.className = 'timeline-frame';
+
+    const preview = createFramePreview(index, 2);
+    if (preview) {
+      preview.classList.add('preview');
+      item.appendChild(preview);
+    }
+
+    const indexLabel = document.createElement('div');
+    indexLabel.className = 'frame-index';
+    indexLabel.textContent = index;
+    item.appendChild(indexLabel);
+
+    // Toolbar
+    const controls = document.createElement('div');
+    controls.className = 'frame-controls';
+
+    const selectBtn = document.createElement('button');
+    selectBtn.textContent = '🎯';
+    selectBtn.title = 'Select Frame';
+    selectBtn.onclick = () => setFrameIndex(index);
+    controls.appendChild(selectBtn);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = '✖';
+    deleteBtn.title = 'Delete Frame';
+    deleteBtn.onclick = () => {
+      removeFrame(index);
+      renderTimeline();
+    };
+    controls.appendChild(deleteBtn);
+
+    const duplicateBtn = document.createElement('button');
+    duplicateBtn.textContent = '⧉';
+    duplicateBtn.title = 'Duplicate Frame';
+    duplicateBtn.onclick = () => {
+      addFrame(frame);
+      renderTimeline();
+    };
+    controls.appendChild(duplicateBtn);
+
+    const moveLeftBtn = document.createElement('button');
+    moveLeftBtn.textContent = '←';
+    moveLeftBtn.title = 'Move Left';
+    moveLeftBtn.onclick = () => {
+      if (index > 0) {
+        moveFrame(index, index - 1);
+        renderTimeline();
       }
-      renderTimeline();
-    });
-    item.appendChild(delBtn);
-    item.addEventListener('click', () => {
-      selectedFrame = idx;
-      setFrameIndex(idx);
-      renderTimeline();
-    });
-    frameList.appendChild(item);
+    };
+    controls.appendChild(moveLeftBtn);
+
+    const moveRightBtn = document.createElement('button');
+    moveRightBtn.textContent = '→';
+    moveRightBtn.title = 'Move Right';
+    moveRightBtn.onclick = () => {
+      if (index < frames.length - 1) {
+        moveFrame(index, index + 1);
+        renderTimeline();
+      }
+    };
+    controls.appendChild(moveRightBtn);
+
+    item.appendChild(controls);
+    container.appendChild(item);
   });
+}
+
+export function initTimeline() {
+  const panel = document.getElementById('timeline-panel');
+  if (!panel) return;
+
+  // Ensure the timeline frame container exists
+  let container = document.getElementById('timeline-frames');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'timeline-frames';
+    panel.appendChild(container);
+  }
+
+  renderTimeline();
 }
