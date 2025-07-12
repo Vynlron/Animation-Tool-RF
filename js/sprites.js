@@ -1,4 +1,6 @@
-import { addFrame, addCanvasSprite, screenToWorld } from '../studio/studio.js';
+import { addCanvasSprite, screenToWorld } from '../studio/studio.js';
+
+let isDraggingFromPalette = false;
 
 export async function initSprites() {
   const img = new Image();
@@ -7,13 +9,10 @@ export async function initSprites() {
 
   const tileSize = 20;
   const cols = img.width / tileSize;
-  const totalTiles = (img.width / tileSize) * (img.height / tileSize);
+  const totalTiles = cols * (img.height / tileSize);
 
   const panel = document.getElementById('sprite-selector-panel');
   panel.innerHTML = '';
-
-  let isDraggingSprite = false;
-  let ignoreNextClick = false;
 
   const categories = {
     HEAD: [0, cols],
@@ -38,12 +37,14 @@ export async function initSprites() {
     const frame = [i % cols, Math.floor(i / cols)];
     const sx = frame[0] * tileSize;
     const sy = frame[1] * tileSize;
+
     const c = document.createElement('canvas');
     c.width = tileSize;
     c.height = tileSize;
     const ctx = c.getContext('2d');
     ctx.drawImage(img, sx, sy, tileSize, tileSize, 0, 0, tileSize, tileSize);
     const url = c.toDataURL();
+
     const cat = i < categories.HEAD[1] ? 'HEAD' : 'BODY';
     const el = document.createElement('img');
     el.src = url;
@@ -51,28 +52,31 @@ export async function initSprites() {
     el.style.width = '40px';
     el.style.height = '40px';
     el.style.imageRendering = 'pixelated';
+
+    // On drag start, mark we’re dragging from the sprite palette
     el.addEventListener('dragstart', ev => {
-      isDraggingSprite = true;
-      ignoreNextClick = true;
+      isDraggingFromPalette = true;
       ev.dataTransfer.setData('text/plain', JSON.stringify({ src: url, cat, frame }));
     });
+
+    // On drop end, reset drag flag
     el.addEventListener('dragend', () => {
-      isDraggingSprite = false;
+      setTimeout(() => {
+        isDraggingFromPalette = false;
+      }, 10);
     });
+
+    // On click, only add if not dragging
     el.addEventListener('click', () => {
-      if (ignoreNextClick) {
-        ignoreNextClick = false;
-        return;
-      }
-      insertSprite(url, cat, 0, 0);
-      addFrame(frame);
-      if (window.renderTimeline) window.renderTimeline();
+      if (isDraggingFromPalette) return;
+      insertSprite(url, 0, 0);
     });
+
     groups[cat].appendChild(el);
   }
 }
 
-function insertSprite(src, layer, x, y) {
+function insertSprite(src, x, y) {
   const img = new Image();
   img.src = src;
   img.onload = () => addCanvasSprite(img, x, y);
@@ -80,14 +84,16 @@ function insertSprite(src, layer, x, y) {
 
 export function enableDrop(canvas) {
   canvas.addEventListener('dragover', e => e.preventDefault());
+
   canvas.addEventListener('drop', e => {
     e.preventDefault();
+    if (!isDraggingFromPalette) return;
+
     const data = JSON.parse(e.dataTransfer.getData('text/plain'));
     const pos = screenToWorld(e.offsetX, e.offsetY);
-    insertSprite(data.src, data.cat, pos.x, pos.y);
-    if (data.frame) {
-      addFrame(data.frame);
-      if (window.renderTimeline) window.renderTimeline();
-    }
+    insertSprite(data.src, pos.x, pos.y);
+
+    // Never add frame here!
+    isDraggingFromPalette = false;
   });
 }
