@@ -13,6 +13,7 @@ export async function initSprites() {
   panel.innerHTML = '';
 
   let isDraggingSprite = false;
+  let ignoreNextClick = false;
 
   const categories = {
     HEAD: [0, cols],
@@ -52,14 +53,17 @@ export async function initSprites() {
     el.style.imageRendering = 'pixelated';
     el.addEventListener('dragstart', ev => {
       isDraggingSprite = true;
+      ignoreNextClick = true;
       ev.dataTransfer.setData('text/plain', JSON.stringify({ src: url, cat, frame }));
     });
     el.addEventListener('dragend', () => {
-      // allow click events after drag to be ignored
-      setTimeout(() => { isDraggingSprite = false; }, 0);
+      isDraggingSprite = false;
     });
     el.addEventListener('click', () => {
-      if (isDraggingSprite) return;
+      if (ignoreNextClick) {
+        ignoreNextClick = false;
+        return;
+      }
       insertSprite(url, cat, 0, 0);
       addFrame(frame);
       if (window.renderTimeline) window.renderTimeline();
