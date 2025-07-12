@@ -1,10 +1,12 @@
-import { pan, addCanvasSprite } from '../studio/studio.js';
+import { pan, addCanvasSprite, screenToWorld, getSpriteAtPoint } from '../studio/studio.js';
 
 let isGridVisible = true;
 let isPlaying = true;
 let activeTool = '';
 let isPanning = false;
 let panStart = { x: 0, y: 0 };
+let selectedSprite = null;
+let dragOffset = { x: 0, y: 0 };
 
 export function initTools(canvas) {
   function setActiveTool(id) {
@@ -49,14 +51,24 @@ export function initTools(canvas) {
   });
 
   canvas.addEventListener('mousedown', (e) => {
-    if (activeTool === 'tool-pan' && e.button === 0) {
+    const pos = screenToWorld(e.offsetX, e.offsetY);
+    const sprite = getSpriteAtPoint(pos.x, pos.y);
+    if (sprite && e.button === 0) {
+      selectedSprite = sprite;
+      dragOffset = { x: pos.x - sprite.x, y: pos.y - sprite.y };
+    } else if (activeTool === 'tool-pan' && e.button === 0) {
       isPanning = true;
       panStart = { x: e.clientX, y: e.clientY };
     }
   });
 
   document.addEventListener('mousemove', (e) => {
-    if (isPanning) {
+    if (selectedSprite) {
+      const rect = canvas.getBoundingClientRect();
+      const pos = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+      selectedSprite.x = pos.x - dragOffset.x;
+      selectedSprite.y = pos.y - dragOffset.y;
+    } else if (isPanning) {
       const dx = e.clientX - panStart.x;
       const dy = e.clientY - panStart.y;
       panStart = { x: e.clientX, y: e.clientY };
@@ -66,6 +78,7 @@ export function initTools(canvas) {
 
   document.addEventListener('mouseup', () => {
     isPanning = false;
+    selectedSprite = null;
   });
 
   canvas.addEventListener('dragover', (e) => e.preventDefault());

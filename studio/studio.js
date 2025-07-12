@@ -253,3 +253,18 @@ export function screenToWorld(x, y) {
     y: (y - cy) / zoomLevel - offsetY
   };
 }
+
+export function getSpriteAtPoint(x, y) {
+  for (let i = sprites.length - 1; i >= 0; i--) {
+    const s = sprites[i];
+    if (
+      x >= s.x &&
+      x <= s.x + s.img.width &&
+      y >= s.y &&
+      y <= s.y + s.img.height
+    ) {
+      return s;
+    }
+  }
+  return null;
+}
