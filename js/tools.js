@@ -1,14 +1,12 @@
-import { pan } from '../studio/studio.js';
+import { pan, addCanvasSprite } from '../studio/studio.js';
 
 let isGridVisible = true;
 let isPlaying = true;
 let activeTool = '';
 let isPanning = false;
 let panStart = { x: 0, y: 0 };
-let spriteCounter = 0;
-const sprites = [];
 
-export function initTools(canvasWrapper) {
+export function initTools(canvas) {
   function setActiveTool(id) {
     activeTool = id;
     document.querySelectorAll('.studio-sidebar button').forEach(btn => {
@@ -20,7 +18,6 @@ export function initTools(canvasWrapper) {
 
   document.getElementById('tool-toggle-grid').addEventListener('click', () => {
     isGridVisible = !isGridVisible;
-    canvasWrapper.style.setProperty('--grid-opacity', isGridVisible ? '0.3' : '0');
   });
 
   const playBtn = document.getElementById('tool-toggle-play');
@@ -42,19 +39,7 @@ export function initTools(canvasWrapper) {
     reader.onload = () => {
       const img = new Image();
       img.src = reader.result;
-      img.onload = () => {
-        const el = document.createElement('img');
-        const id = 'sp' + (++spriteCounter);
-        sprites.push({ id, src: img.src, name: file.name });
-        el.src = img.src;
-        el.dataset.id = id;
-        el.classList.add('canvas-sprite');
-        el.style.left = '0px';
-        el.style.top = '0px';
-        makeDraggable(el);
-        const layerEl = document.getElementById('layer-HEAD');
-        if (layerEl) layerEl.appendChild(el);
-      };
+      img.onload = () => addCanvasSprite(img, 0, 0);
     };
     reader.readAsDataURL(file);
   });
@@ -63,7 +48,7 @@ export function initTools(canvasWrapper) {
     setActiveTool('tool-pan');
   });
 
-  canvasWrapper.addEventListener('mousedown', (e) => {
+  canvas.addEventListener('mousedown', (e) => {
     if (activeTool === 'tool-pan' && e.button === 0) {
       isPanning = true;
       panStart = { x: e.clientX, y: e.clientY };
@@ -83,35 +68,7 @@ export function initTools(canvasWrapper) {
     isPanning = false;
   });
 
-  canvasWrapper.addEventListener('dragover', (e) => e.preventDefault());
-
-  function makeDraggable(el) {
-    let drag = null;
-    let zoom = parseFloat(canvasWrapper.style.getPropertyValue('--zoom') || '1');
-    el.addEventListener('mousedown', (e) => {
-      if (activeTool === 'tool-pan') return;
-      zoom = parseFloat(canvasWrapper.style.getPropertyValue('--zoom') || '1');
-      drag = {
-        x: e.clientX,
-        y: e.clientY,
-        left: parseFloat(el.style.left || '0'),
-        top: parseFloat(el.style.top || '0')
-      };
-      e.stopPropagation();
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!drag) return;
-      const dx = (e.clientX - drag.x) / zoom;
-      const dy = (e.clientY - drag.y) / zoom;
-      el.style.left = `${drag.left + dx}px`;
-      el.style.top = `${drag.top + dy}px`;
-    });
-
-    document.addEventListener('mouseup', () => {
-      drag = null;
-    });
-  }
+  canvas.addEventListener('dragover', (e) => e.preventDefault());
 }
 
 export function isPlaybackEnabled() {

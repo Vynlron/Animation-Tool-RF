@@ -7,25 +7,21 @@ let zoomLevel = 2;
 const minZoom = 0.5;
 const maxZoom = 6;
 let canvasRef = null;
-let layersEl = null;
+// Array of sprites drawn on the canvas
+const sprites = [];
+let layersEl = null; // legacy element no longer used
 
 // Infinite canvas state
 let offsetX = 0;
 let offsetY = 0;
 
 function updateLayerTransform() {
-  if (!layersEl) return;
-  layersEl.style.transformOrigin = 'center center';
-  const tx = Math.round(offsetX * zoomLevel);
-  const ty = Math.round(offsetY * zoomLevel);
-  const scale = zoomLevel.toFixed(4);
-  layersEl.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
+  // kept for backward compatibility but no DOM transforms are applied
 }
 
 export function pan(dx, dy) {
   offsetX += dx / zoomLevel;
   offsetY += dy / zoomLevel;
-  updateLayerTransform();
 }
 
 /**
@@ -33,19 +29,16 @@ export function pan(dx, dy) {
  */
 export function initStudio(canvasElement) {
   canvasRef = canvasElement;
-  layersEl = document.getElementById('layers');
   canvasElement.width = window.innerWidth;
   canvasElement.height = window.innerHeight;
   ctx = canvasElement.getContext('2d');
   lastTime = performance.now();
 
-  updateLayerTransform();
 
   // Resize canvas on window change
   window.addEventListener('resize', () => {
     canvasRef.width = window.innerWidth;
     canvasRef.height = window.innerHeight;
-    updateLayerTransform();
   });
 
   // Mouse wheel zoom
@@ -58,7 +51,6 @@ export function initStudio(canvasElement) {
       zoomLevel = Math.min(maxZoom, zoomLevel + 0.1);
     }
     zoomLevel = Math.round(zoomLevel * 10) / 10;
-    updateLayerTransform();
   });
 
   // Pan interactions are handled by the tools module
@@ -69,51 +61,37 @@ export function initStudio(canvasElement) {
 /**
  * Draws a scrolling background grid that moves with pan & zoom.
  */
-function drawGrid(ctx, width, height, offsetX, offsetY, zoom) {
-  const baseSize = 10;
-  const gridSize = baseSize * zoom;
+function drawGrid(ctx, width, height, zoom) {
+  const baseSize = 10; // world units
+  const gridSize = baseSize;
   const majorLineEvery = 5;
-  const centerX = width / 2 + offsetX * zoom;
-  const centerY = height / 2 + offsetY * zoom;
+  const worldLeft = -width / 2 / zoom - offsetX;
+  const worldRight = width / 2 / zoom - offsetX;
+  const worldTop = -height / 2 / zoom - offsetY;
+  const worldBottom = height / 2 / zoom - offsetY;
+
+  const startX = Math.floor(worldLeft / gridSize) * gridSize;
+  const endX = Math.ceil(worldRight / gridSize) * gridSize;
+  const startY = Math.floor(worldTop / gridSize) * gridSize;
+  const endY = Math.ceil(worldBottom / gridSize) * gridSize;
 
   ctx.save();
-  let index = 1;
-  for (let x = centerX + gridSize; x <= width; x += gridSize, index++) {
+  ctx.lineWidth = 1 / zoom;
+  let index = 0;
+  for (let x = startX; x <= endX; x += gridSize, index++) {
     ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, height);
+    ctx.moveTo(x, startY);
+    ctx.lineTo(x, endY);
     ctx.strokeStyle = (index % majorLineEvery === 0) ? '#444' : '#2a2a2a';
-    ctx.lineWidth = (index % majorLineEvery === 0) ? 1.3 : 0.5;
     ctx.stroke();
   }
 
-  index = 1;
-  for (let x = centerX - gridSize; x >= 0; x -= gridSize, index++) {
+  index = 0;
+  for (let y = startY; y <= endY; y += gridSize, index++) {
     ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, height);
+    ctx.moveTo(startX, y);
+    ctx.lineTo(endX, y);
     ctx.strokeStyle = (index % majorLineEvery === 0) ? '#444' : '#2a2a2a';
-    ctx.lineWidth = (index % majorLineEvery === 0) ? 1.3 : 0.5;
-    ctx.stroke();
-  }
-
-  index = 1;
-  for (let y = centerY + gridSize; y <= height; y += gridSize, index++) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(width, y);
-    ctx.strokeStyle = (index % majorLineEvery === 0) ? '#444' : '#2a2a2a';
-    ctx.lineWidth = (index % majorLineEvery === 0) ? 1.3 : 0.5;
-    ctx.stroke();
-  }
-
-  index = 1;
-  for (let y = centerY - gridSize; y >= 0; y -= gridSize, index++) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(width, y);
-    ctx.strokeStyle = (index % majorLineEvery === 0) ? '#444' : '#2a2a2a';
-    ctx.lineWidth = (index % majorLineEvery === 0) ? 1.3 : 0.5;
     ctx.stroke();
   }
   ctx.restore();
@@ -123,22 +101,19 @@ function drawGrid(ctx, width, height, offsetX, offsetY, zoom) {
 // The lines follow the panning/zooming of the grid so that the
 // origin always lines up with the grid's center rather than the
 // screen center.
-function drawCrosshair(ctx, width, height, offsetX, offsetY, zoom) {
-  const centerX = width / 2 + offsetX * zoom;
-  const centerY = height / 2 + offsetY * zoom;
-
+function drawCrosshair(ctx, width, height, zoom) {
   ctx.save();
+  ctx.lineWidth = 1 / zoom;
   ctx.strokeStyle = '#aa0000';
-  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(0, centerY);
-  ctx.lineTo(width, centerY);
+  ctx.moveTo(-10000, 0);
+  ctx.lineTo(10000, 0);
   ctx.stroke();
 
   ctx.strokeStyle = '#0033cc';
   ctx.beginPath();
-  ctx.moveTo(centerX, 0);
-  ctx.lineTo(centerX, height);
+  ctx.moveTo(0, -10000);
+  ctx.lineTo(0, 10000);
   ctx.stroke();
   ctx.restore();
 }
@@ -157,20 +132,29 @@ function loop(time) {
   const centerX = canvasRef.width / 2;
   const centerY = canvasRef.height / 2;
 
+  ctx.save();
+  ctx.translate(centerX, centerY);
+  ctx.scale(zoomLevel, zoomLevel);
+  ctx.translate(offsetX, offsetY);
+
   if (window.isGridEnabled ? window.isGridEnabled() : true) {
-    drawGrid(ctx, canvasRef.width, canvasRef.height, offsetX, offsetY, zoomLevel);
+    drawGrid(ctx, canvasRef.width, canvasRef.height, zoomLevel);
   }
-  drawCrosshair(ctx, canvasRef.width, canvasRef.height, offsetX, offsetY, zoomLevel);
+  drawCrosshair(ctx, canvasRef.width, canvasRef.height, zoomLevel);
 
   if (rfAni) {
     if (window.isPlaybackEnabled ? window.isPlaybackEnabled() : true) {
       rfAni.update(dt);
     }
 
-
-
-    rfAni.draw(ctx, centerX, centerY, zoomLevel);
+    rfAni.draw(ctx, 0, 0, 1);
   }
+
+  for (const s of sprites) {
+    ctx.drawImage(s.img, s.x, s.y);
+  }
+
+  ctx.restore();
 
   requestAnimationFrame(loop);
 }
@@ -254,5 +238,18 @@ export function getAnimationData() {
     frameHeight: rfAni.frameHeight,
     frames: rfAni.frames.slice(),
     speed: rfAni.speed
+  };
+}
+
+export function addCanvasSprite(img, x = 0, y = 0) {
+  sprites.push({ img, x, y });
+}
+
+export function screenToWorld(x, y) {
+  const cx = canvasRef.width / 2;
+  const cy = canvasRef.height / 2;
+  return {
+    x: (x - cx) / zoomLevel - offsetX,
+    y: (y - cy) / zoomLevel - offsetY
   };
 }
