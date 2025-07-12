@@ -16,7 +16,10 @@ let offsetY = 0;
 function updateLayerTransform() {
   if (!layersEl) return;
   layersEl.style.transformOrigin = 'center center';
-  layersEl.style.transform = `translate(${offsetX * zoomLevel}px, ${offsetY * zoomLevel}px) scale(${zoomLevel})`;
+  const tx = Math.round(offsetX * zoomLevel);
+  const ty = Math.round(offsetY * zoomLevel);
+  const scale = zoomLevel.toFixed(4);
+  layersEl.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
 }
 
 export function pan(dx, dy) {
@@ -229,7 +232,7 @@ export function createFramePreview(index, scale = 2) {
 }
 
 export function addFrame(frame) {
-  if (!rfAni) return;
+  if (!rfAni || !frame || frame.length !== 2) return; // Check for valid [x, y] frame tuple
   const frames = rfAni.frames.concat([frame]);
   rfAni.setFrames(frames);
 }

@@ -53,28 +53,40 @@
         <button id="back-to-menu" class="back-btn" type="button">⬅ Back</button>
       </div>
     </div>
-    <div class="studio-container">
-      <div class="studio-sidebar">
-        <button id="tool-pan" title="Pan Tool">🖐️</button>
-        <button id="tool-add-sprite" title="Add Sprite">➕</button>
-        <button id="tool-add-frame" title="Add Frame">🎞️</button>
-        <button id="tool-toggle-grid" title="Toggle Grid">🔲</button>
-        <button id="tool-toggle-play" title="Play">▶️</button>
-        <input type="file" id="sprite-loader" accept="image/*" style="display: none;">
-      </div>
 
-      <div class="studio-main">
+    <div class="studio-container">
+      <div class="studio-main fullscreen-grid">
+
+        <!-- Floating transparent tools -->
+        <div class="studio-sidebar transparent-tools">
+          <button id="tool-pan" title="Pan Tool">🖐️</button>
+          <button id="tool-add-sprite" title="Add Sprite">➕</button>
+          <button id="tool-add-frame" title="Add Frame">🎞️</button>
+          <button id="tool-toggle-grid" title="Toggle Grid">🔲</button>
+          <button id="tool-toggle-play" title="Play">▶️</button>
+          <input type="file" id="sprite-loader" accept="image/*" style="display: none;">
+        </div>
+
         <div class="canvas-wrapper">
-          <canvas id="preview" width="160" height="160"></canvas>
+          <canvas id="preview"></canvas>
           <div id="layers">
             <div id="layer-HEAD" class="sprite-layer"></div>
             <div id="layer-BODY" class="sprite-layer"></div>
           </div>
         </div>
-      </div>
 
+        <!-- Floating sprite panel on the right -->
+        <div class="sprite-panel transparent-sprite-panel" id="sprite-selector-panel">
+          <h3>Sprites</h3>
+          <ul id="sprite-list">
+            <!-- Sprites will be listed here -->
+          </ul>
+        </div>
+
+      </div>
     </div>
-    <div class="frame-timeline">
+
+    <div class="frame-timeline floating-timeline">
       <button id="frame-left-btn" title="Move frame left">◀️</button>
       <div id="frame-list" class="frame-list"></div>
       <button id="frame-right-btn" title="Move frame right">▶️</button>
@@ -97,4 +109,3 @@
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
-

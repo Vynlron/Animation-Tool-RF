@@ -1,4 +1,4 @@
-import { addFrame, pan } from '../studio/studio.js';
+import { pan } from '../studio/studio.js';
 
 let isGridVisible = true;
 let isPlaying = true;
@@ -18,10 +18,10 @@ export function initTools(canvasWrapper) {
 
   setActiveTool('tool-pan');
 
-    document.getElementById('tool-toggle-grid').addEventListener('click', () => {
-      isGridVisible = !isGridVisible;
-      canvasWrapper.style.setProperty('--grid-opacity', isGridVisible ? '0.3' : '0');
-    });
+  document.getElementById('tool-toggle-grid').addEventListener('click', () => {
+    isGridVisible = !isGridVisible;
+    canvasWrapper.style.setProperty('--grid-opacity', isGridVisible ? '0.3' : '0');
+  });
 
   const playBtn = document.getElementById('tool-toggle-play');
   playBtn.textContent = isPlaying ? '⏸️' : '▶️';
@@ -59,11 +59,6 @@ export function initTools(canvasWrapper) {
     reader.readAsDataURL(file);
   });
 
-  document.getElementById('tool-add-frame').addEventListener('click', () => {
-    addFrame([0, 0]);
-    if (window.renderTimeline) window.renderTimeline();
-  });
-
   document.getElementById('tool-pan').addEventListener('click', () => {
     setActiveTool('tool-pan');
   });
@@ -92,23 +87,25 @@ export function initTools(canvasWrapper) {
 
   function makeDraggable(el) {
     let drag = null;
+    let zoom = parseFloat(canvasWrapper.style.getPropertyValue('--zoom') || '1');
     el.addEventListener('mousedown', (e) => {
       if (activeTool === 'tool-pan') return;
+      zoom = parseFloat(canvasWrapper.style.getPropertyValue('--zoom') || '1');
       drag = {
         x: e.clientX,
         y: e.clientY,
-        left: parseInt(el.style.left || '0', 10),
-        top: parseInt(el.style.top || '0', 10)
+        left: parseFloat(el.style.left || '0'),
+        top: parseFloat(el.style.top || '0')
       };
       e.stopPropagation();
     });
 
     document.addEventListener('mousemove', (e) => {
       if (!drag) return;
-      const dx = e.clientX - drag.x;
-      const dy = e.clientY - drag.y;
-      el.style.left = drag.left + dx + 'px';
-      el.style.top = drag.top + dy + 'px';
+      const dx = (e.clientX - drag.x) / zoom;
+      const dy = (e.clientY - drag.y) / zoom;
+      el.style.left = `${drag.left + dx}px`;
+      el.style.top = `${drag.top + dy}px`;
     });
 
     document.addEventListener('mouseup', () => {

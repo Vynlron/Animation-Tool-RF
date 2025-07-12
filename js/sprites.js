@@ -9,7 +9,7 @@ export async function initSprites() {
   const cols = img.width / tileSize;
   const totalTiles = (img.width / tileSize) * (img.height / tileSize);
 
-  const panel = document.getElementById('sprite-panel');
+  const panel = document.getElementById('sprite-selector-panel');
   panel.innerHTML = '';
 
   let isDraggingSprite = false;
@@ -47,6 +47,9 @@ export async function initSprites() {
     const el = document.createElement('img');
     el.src = url;
     el.draggable = true;
+    el.style.width = '40px';
+    el.style.height = '40px';
+    el.style.imageRendering = 'pixelated';
     el.addEventListener('dragstart', ev => {
       isDraggingSprite = true;
       ev.dataTransfer.setData('text/plain', JSON.stringify({ src: url, cat, frame }));
@@ -68,15 +71,32 @@ export async function initSprites() {
 function insertSprite(src, layer, x, y) {
   const layerEl = document.getElementById(`layer-${layer}`);
   if (!layerEl) return;
+
   const img = document.createElement('img');
   img.src = src;
   img.classList.add('canvas-sprite');
   img.style.left = x + 'px';
   img.style.top = y + 'px';
+  img.dataset.name = layer + '-' + Date.now(); // unique name
   makeDraggable(img);
   layerEl.appendChild(img);
-}
 
+  // Add to sprite panel on right
+  const list = document.getElementById('sprite-list');
+  const li = document.createElement('li');
+  li.innerHTML = `<span>${layer}</span> <button title="Delete">🗑️</button>`;
+  const deleteBtn = li.querySelector('button');
+
+  deleteBtn.addEventListener('click', () => {
+    layerEl.removeChild(img);
+    li.remove();
+
+  console.log('[insertSprite called]', { src, layer, x, y });
+
+  });
+
+  list.appendChild(li);
+}
 function makeDraggable(el) {
   let drag = null;
   el.addEventListener('mousedown', (e) => {
