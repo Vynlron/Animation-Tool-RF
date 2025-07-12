@@ -6,6 +6,7 @@ import { initTools, isPlaybackEnabled, isGridEnabled } from './tools.js';
 import { initSprites, enableDrop } from './sprites.js';
 import { loadAnimation, setSpeed } from '../studio/studio.js';
 import { showModal } from '../ui/modal.js'; // ✅ this is fine
+import { initLayerTimeline } from './layerTimeline.js';
 
 // ❌ REMOVE this line:
 // import { renderTimeline } from './ui/timeline.js';
@@ -15,6 +16,7 @@ initStudio(canvas);
 
 initStudioControls();
 initTimeline();
+initLayerTimeline();
 initTools(canvas);
 initMenu({
   mainMenu: document.getElementById('main-menu'),
