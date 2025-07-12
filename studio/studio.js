@@ -16,8 +16,8 @@ let offsetY = 0;
 function updateLayerTransform() {
   if (!layersEl) return;
   layersEl.style.transformOrigin = 'center center';
-  const tx = Math.round(offsetX * zoomLevel);
-  const ty = Math.round(offsetY * zoomLevel);
+  const tx = offsetX * zoomLevel;
+  const ty = offsetY * zoomLevel;
   const scale = zoomLevel.toFixed(4);
   layersEl.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
 }
