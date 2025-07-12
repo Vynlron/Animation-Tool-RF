@@ -124,22 +124,7 @@ canvas#preview:active {
 }
 
 /* ==== SPRITES & LAYERS ==== */
-#layers,
-.sprite-layer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.sprite-layer img {
-  position: absolute;
-  pointer-events: all;
-}
-.canvas-sprite {
-  image-rendering: pixelated;
-  cursor: move;
-  position: absolute;
-  pointer-events: auto;
-}
+/* Removed layered DOM sprites - sprites now drawn on canvas */
 
 /* ==== TRANSPARENT PANELS ==== */
 .transparent-tools {

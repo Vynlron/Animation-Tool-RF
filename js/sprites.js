@@ -1,4 +1,4 @@
-import { addFrame } from '../studio/studio.js';
+import { addFrame, addCanvasSprite, screenToWorld } from '../studio/studio.js';
 
 export async function initSprites() {
   const img = new Image();
@@ -69,56 +69,18 @@ export async function initSprites() {
 }
 
 function insertSprite(src, layer, x, y) {
-  const layerEl = document.getElementById(`layer-${layer}`);
-  if (!layerEl) return;
-
-  const img = document.createElement('img');
+  const img = new Image();
   img.src = src;
-  img.classList.add('canvas-sprite');
-  img.style.left = x + 'px';
-  img.style.top = y + 'px';
-  img.dataset.name = layer + '-' + Date.now(); // unique name
-  makeDraggable(img);
-  layerEl.appendChild(img);
-
-  // Add to sprite panel on right
-  const list = document.getElementById('sprite-list');
-  const li = document.createElement('li');
-  li.innerHTML = `<span>${layer}</span> <button title="Delete">🗑️</button>`;
-  const deleteBtn = li.querySelector('button');
-
-  deleteBtn.addEventListener('click', () => {
-    layerEl.removeChild(img);
-    li.remove();
-
-  console.log('[insertSprite called]', { src, layer, x, y });
-
-  });
-
-  list.appendChild(li);
-}
-function makeDraggable(el) {
-  let drag = null;
-  el.addEventListener('mousedown', (e) => {
-    drag = { x: e.clientX, y: e.clientY, left: parseInt(el.style.left, 10) || 0, top: parseInt(el.style.top, 10) || 0 };
-    e.stopPropagation();
-  });
-  document.addEventListener('mousemove', (e) => {
-    if (!drag) return;
-    const dx = e.clientX - drag.x;
-    const dy = e.clientY - drag.y;
-    el.style.left = drag.left + dx + 'px';
-    el.style.top = drag.top + dy + 'px';
-  });
-  document.addEventListener('mouseup', () => { drag = null; });
+  img.onload = () => addCanvasSprite(img, x, y);
 }
 
-export function enableDrop(wrapper) {
-  wrapper.addEventListener('dragover', e => e.preventDefault());
-  wrapper.addEventListener('drop', e => {
+export function enableDrop(canvas) {
+  canvas.addEventListener('dragover', e => e.preventDefault());
+  canvas.addEventListener('drop', e => {
     e.preventDefault();
     const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-    insertSprite(data.src, data.cat, e.offsetX, e.offsetY);
+    const pos = screenToWorld(e.offsetX, e.offsetY);
+    insertSprite(data.src, data.cat, pos.x, pos.y);
     if (data.frame) {
       addFrame(data.frame);
       if (window.renderTimeline) window.renderTimeline();

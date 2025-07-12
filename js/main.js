@@ -12,8 +12,7 @@ initStudio(canvas);
 
 initStudioControls();
 initTimeline();
-const canvasWrapper = document.querySelector('.canvas-wrapper');
-initTools(canvasWrapper);
+initTools(canvas);
 initMenu({
   mainMenu: document.getElementById('main-menu'),
   studio: document.getElementById('studio'),
@@ -26,7 +25,7 @@ initMenu({
 });
 
 initSprites();
-enableDrop(canvasWrapper);
+enableDrop(canvas);
 
 window.isPlaybackEnabled = isPlaybackEnabled;
 window.renderTimeline = renderTimeline;
