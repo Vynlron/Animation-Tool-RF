@@ -7,26 +7,19 @@ let zoomLevel = 2;
 const minZoom = 0.5;
 const maxZoom = 6;
 let canvasRef = null;
-// Array of sprites drawn on the canvas
 const sprites = [];
-let layersEl = null; // legacy element no longer used
+let layersEl = null;
 
-// Infinite canvas state
 let offsetX = 0;
 let offsetY = 0;
 
-function updateLayerTransform() {
-  // kept for backward compatibility but no DOM transforms are applied
-}
+function updateLayerTransform() {}
 
 export function pan(dx, dy) {
   offsetX += dx / zoomLevel;
   offsetY += dy / zoomLevel;
 }
 
-/**
- * Initialize studio with a canvas element.
- */
 export function initStudio(canvasElement) {
   canvasRef = canvasElement;
   canvasElement.width = window.innerWidth;
@@ -34,35 +27,23 @@ export function initStudio(canvasElement) {
   ctx = canvasElement.getContext('2d');
   lastTime = performance.now();
 
-
-  // Resize canvas on window change
   window.addEventListener('resize', () => {
     canvasRef.width = window.innerWidth;
     canvasRef.height = window.innerHeight;
   });
 
-  // Mouse wheel zoom
   canvasElement.addEventListener('wheel', (e) => {
     e.preventDefault();
     const delta = Math.sign(e.deltaY);
-    if (delta > 0) {
-      zoomLevel = Math.max(minZoom, zoomLevel - 0.1);
-    } else {
-      zoomLevel = Math.min(maxZoom, zoomLevel + 0.1);
-    }
+    zoomLevel = Math.max(minZoom, Math.min(maxZoom, zoomLevel + (delta < 0 ? 0.1 : -0.1)));
     zoomLevel = Math.round(zoomLevel * 10) / 10;
   });
-
-  // Pan interactions are handled by the tools module
 
   requestAnimationFrame(loop);
 }
 
-/**
- * Draws a scrolling background grid that moves with pan & zoom.
- */
 function drawGrid(ctx, width, height, zoom) {
-  const baseSize = 10; // world units
+  const baseSize = 10;
   const gridSize = baseSize;
   const majorLineEvery = 5;
   const worldLeft = -width / 2 / zoom - offsetX;
@@ -97,10 +78,6 @@ function drawGrid(ctx, width, height, zoom) {
   ctx.restore();
 }
 
-// Draws the red (horizontal) and blue (vertical) crosshair lines.
-// The lines follow the panning/zooming of the grid so that the
-// origin always lines up with the grid's center rather than the
-// screen center.
 function drawCrosshair(ctx, width, height, zoom) {
   ctx.save();
   ctx.lineWidth = 1 / zoom;
@@ -118,11 +95,6 @@ function drawCrosshair(ctx, width, height, zoom) {
   ctx.restore();
 }
 
-
-
-/**
- * Main animation loop
- */
 function loop(time) {
   const dt = time - lastTime;
   lastTime = time;
@@ -159,7 +131,6 @@ function loop(time) {
   requestAnimationFrame(loop);
 }
 
-// Animation-related utility functions
 export function loadAnimation(data, onReady) {
   const img = new Image();
   img.src = 'assets/' + data.image;
@@ -205,19 +176,38 @@ export function createFramePreview(index, scale = 2) {
   if (!rfAni) return null;
   const frame = rfAni.frames[index];
   if (!frame) return null;
+
   const canvas = document.createElement('canvas');
   canvas.width = rfAni.frameWidth * scale;
   canvas.height = rfAni.frameHeight * scale;
   const c = canvas.getContext('2d');
+
+  if (frame[0] < 0 || frame[1] < 0) {
+    // Show empty frame preview
+    c.fillStyle = '#222';
+    c.fillRect(0, 0, canvas.width, canvas.height);
+    c.fillStyle = '#aaa';
+    c.font = '10px sans-serif';
+    c.fillText('Empty', 4, 12);
+    return canvas;
+  }
+
   const sx = frame[0] * rfAni.frameWidth;
   const sy = frame[1] * rfAni.frameHeight;
   c.drawImage(rfAni.image, sx, sy, rfAni.frameWidth, rfAni.frameHeight, 0, 0, canvas.width, canvas.height);
   return canvas;
 }
 
-export function addFrame(frame) {
-  if (!rfAni || !frame || frame.length !== 2) return; // Check for valid [x, y] frame tuple
-  const frames = rfAni.frames.concat([frame]);
+export function addFrame(frame = null) {
+  if (!rfAni) return;
+  const frames = rfAni.frames.slice();
+
+  if (!frame || !Array.isArray(frame) || frame.length !== 2) {
+    frames.push([-1, -1]); // Placeholder for empty frame
+  } else {
+    frames.push(frame);
+  }
+
   rfAni.setFrames(frames);
 }
 

@@ -1,92 +1,73 @@
 import { getFrames, setFrameIndex, removeFrame, moveFrame, createFramePreview, addFrame } from '../studio/studio.js';
 
+let selectedFrame = 0;
+
 export function renderTimeline() {
-  const container = document.getElementById('timeline-frames');
+  const container = document.getElementById('frame-list');
   if (!container) return;
   container.innerHTML = '';
 
   const frames = getFrames();
   frames.forEach((frame, index) => {
     const item = document.createElement('div');
-    item.className = 'timeline-frame';
+    item.className = 'frame-item';
+    if (index === selectedFrame) item.classList.add('selected');
 
-    const preview = createFramePreview(index, 2);
+    item.onclick = () => {
+      selectedFrame = index;
+      setFrameIndex(index);
+      renderTimeline();
+    };
+
+    const preview = createFramePreview(index, 1);
     if (preview) {
-      preview.classList.add('preview');
+      preview.style.maxWidth = '100%';
+      preview.style.maxHeight = '100%';
       item.appendChild(preview);
     }
 
-    const indexLabel = document.createElement('div');
-    indexLabel.className = 'frame-index';
-    indexLabel.textContent = index;
-    item.appendChild(indexLabel);
-
-    // Toolbar
-    const controls = document.createElement('div');
-    controls.className = 'frame-controls';
-
-    const selectBtn = document.createElement('button');
-    selectBtn.textContent = '🎯';
-    selectBtn.title = 'Select Frame';
-    selectBtn.onclick = () => setFrameIndex(index);
-    controls.appendChild(selectBtn);
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = '✖';
-    deleteBtn.title = 'Delete Frame';
-    deleteBtn.onclick = () => {
+    const del = document.createElement('button');
+    del.innerText = '✖';
+    del.onclick = (e) => {
+      e.stopPropagation();
       removeFrame(index);
+      if (selectedFrame >= frames.length - 1) selectedFrame = Math.max(0, frames.length - 2);
       renderTimeline();
     };
-    controls.appendChild(deleteBtn);
+    item.appendChild(del);
 
-    const duplicateBtn = document.createElement('button');
-    duplicateBtn.textContent = '⧉';
-    duplicateBtn.title = 'Duplicate Frame';
-    duplicateBtn.onclick = () => {
-      addFrame(frame);
-      renderTimeline();
-    };
-    controls.appendChild(duplicateBtn);
-
-    const moveLeftBtn = document.createElement('button');
-    moveLeftBtn.textContent = '←';
-    moveLeftBtn.title = 'Move Left';
-    moveLeftBtn.onclick = () => {
-      if (index > 0) {
-        moveFrame(index, index - 1);
-        renderTimeline();
-      }
-    };
-    controls.appendChild(moveLeftBtn);
-
-    const moveRightBtn = document.createElement('button');
-    moveRightBtn.textContent = '→';
-    moveRightBtn.title = 'Move Right';
-    moveRightBtn.onclick = () => {
-      if (index < frames.length - 1) {
-        moveFrame(index, index + 1);
-        renderTimeline();
-      }
-    };
-    controls.appendChild(moveRightBtn);
-
-    item.appendChild(controls);
     container.appendChild(item);
   });
 }
 
 export function initTimeline() {
-  const panel = document.getElementById('timeline-panel');
-  if (!panel) return;
+  document.getElementById('tool-add-frame')?.addEventListener('click', () => {
+    addFrame(); // Empty frame
+    renderTimeline();
+  });
 
-  // Ensure the timeline frame container exists
-  let container = document.getElementById('timeline-frames');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'timeline-frames';
-    panel.appendChild(container);
-  }
+  document.getElementById('frame-delete-btn')?.addEventListener('click', () => {
+    removeFrame(selectedFrame);
+    selectedFrame = Math.max(0, selectedFrame - 1);
+    renderTimeline();
+  });
+
+  document.getElementById('frame-left-btn')?.addEventListener('click', () => {
+    if (selectedFrame > 0) {
+      moveFrame(selectedFrame, selectedFrame - 1);
+      selectedFrame--;
+      renderTimeline();
+    }
+  });
+
+  document.getElementById('frame-right-btn')?.addEventListener('click', () => {
+    const frames = getFrames();
+    if (selectedFrame < frames.length - 1) {
+      moveFrame(selectedFrame, selectedFrame + 1);
+      selectedFrame++;
+      renderTimeline();
+    }
+  });
 
   renderTimeline();
 }
