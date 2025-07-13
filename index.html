@@ -80,38 +80,13 @@
         </div>
 
       </div>
+    </div>
 
-      <div class="timeline" id="timeline">
-        <div class="timeline-row first-row">
-          <label>Direction
-            <select id="direction-select">
-              <option>Down</option>
-              <option>Up</option>
-              <option>Left</option>
-              <option>Right</option>
-            </select>
-          </label>
-          <label><input type="checkbox" id="multi-direction"> Multi-direction</label>
-          <label><input type="checkbox" id="loop-toggle"> Loop</label>
-          <button id="play-btn">Play</button>
-          <button id="stop-btn" class="stop-btn">Stop</button>
-          <button id="copy-btn">Copy</button>
-          <button id="cut-btn">Cut</button>
-          <button id="paste-btn">Paste</button>
-          <label>Playback Speed <input id="playback-speed" type="number" step="0.1" value="1.0"></label>
-        </div>
-        <div class="timeline-row second-row">
-          <label>Duration <input id="duration-input" type="number" value="100"></label>
-          <button id="duration-plus">+</button>
-          <button id="duration-minus">–</button>
-          <button id="play-frame-btn">Play Frame</button>
-          <button id="copy-frame-btn">Copy Frame</button>
-          <button id="paste-frame-btn">Paste Frame</button>
-          <button id="copy-assets-btn">Copy Assets</button>
-          <button id="paste-assets-btn">Paste Assets</button>
-        </div>
-        <div id="frame-list" class="frame-list"></div>
-      </div>
+    <div class="frame-timeline floating-timeline">
+      <button id="frame-left-btn" title="Move frame left">◀️</button>
+      <div id="frame-list" class="frame-list"></div>
+      <button id="frame-right-btn" title="Move frame right">▶️</button>
+      <button id="frame-delete-btn" title="Delete frame">🗑️</button>
     </div>
   </main>
 
