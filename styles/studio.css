@@ -48,6 +48,7 @@
 /* ==== LAYOUT ==== */
 .studio-container {
   display: flex;
+  flex-direction: column;
   height: calc(100vh - 70px);
   background: #191919;
 }
@@ -220,74 +221,83 @@ canvas#preview:active {
 }
 
 /* ==== TIMELINE ==== */
-.floating-timeline {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 40px);
-  max-width: 1400px;
-  z-index: 10;
-  background: rgba(30, 30, 30, 0.6);
-  backdrop-filter: blur(6px);
-  border-radius: 10px;
-  padding: 12px;
+.timeline {
+  background: #1e1e1e;
+  border-top: 1px solid #333;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timeline-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
-}
-.floating-timeline button {
-  background: rgba(80, 80, 80, 0.6);
-  border: none;
-  color: white;
-  width: 32px;
-  height: 32px;
-  font-size: 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-.floating-timeline button:hover {
-  background: rgba(120, 120, 120, 0.6);
-}
-.floating-timeline .frame-list {
-  flex: 1;
-  display: flex;
   gap: 8px;
-  overflow-x: auto;
+  flex-wrap: wrap;
 }
-.frame-item {
-  position: relative;
-  width: 60px;
-  height: 60px;
-  border: 2px solid #444;
+
+.timeline-row label {
+  color: #ccc;
+  font-size: 13px;
+}
+
+.timeline-row select,
+.timeline-row input[type="number"],
+.timeline-row button {
+  background: #2d2d2d;
+  color: #eee;
+  border: 1px solid #444;
   border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.timeline-row button:hover {
+  background: #444;
+}
+
+.timeline-row .stop-btn {
+  background: #552222;
+}
+
+.timeline-row .stop-btn:hover {
+  background: #7a2b2b;
+}
+
+.frame-list {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-top: 4px;
+}
+
+.frame-item {
+  width: 50px;
+  height: 50px;
+  border: 2px solid #444;
   background: #111;
+  border-radius: 4px;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-}
-.frame-item.selected {
-  border-color: #aaa;
-}
-.frame-item button {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 16px;
-  height: 16px;
-  background: #444;
-  border: none;
-  color: #fff;
+  color: #ccc;
   font-size: 12px;
-  border-radius: 2px;
-  cursor: pointer;
 }
-.frame-item button:hover {
-  background: #666;
+
+.frame-item.selected {
+  border-color: #3399ff;
+  background: #1a2a40;
+}
+
+.frame-number {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #aaa;
 }
 
 #viewport {
