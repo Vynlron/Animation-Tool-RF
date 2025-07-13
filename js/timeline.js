@@ -3,7 +3,7 @@ import { getFrames, setFrameIndex, removeFrame, moveFrame, createFramePreview, a
 let selectedFrame = 0;
 
 export function renderTimeline() {
-  const container = document.getElementById('frame-list');
+  const container = document.querySelector('.frame-grid');  
   if (!container) return;
   container.innerHTML = '';
 
@@ -41,32 +41,47 @@ export function renderTimeline() {
 }
 
 export function initTimeline() {
-  document.getElementById('tool-add-frame')?.addEventListener('click', () => {
-    addFrame(); // Empty frame
+  document.getElementById('add-frame')?.addEventListener('click', () => {
+    addFrame();
     renderTimeline();
   });
 
-  document.getElementById('frame-delete-btn')?.addEventListener('click', () => {
+  document.getElementById('remove-frame')?.addEventListener('click', () => {
     removeFrame(selectedFrame);
     selectedFrame = Math.max(0, selectedFrame - 1);
     renderTimeline();
   });
 
-  document.getElementById('frame-left-btn')?.addEventListener('click', () => {
-    if (selectedFrame > 0) {
-      moveFrame(selectedFrame, selectedFrame - 1);
-      selectedFrame--;
-      renderTimeline();
+  document.getElementById('copy-frame')?.addEventListener('click', () => {
+    const frames = getFrames();
+    if (frames[selectedFrame]) {
+      localStorage.setItem('copied-frame', JSON.stringify(frames[selectedFrame]));
     }
   });
 
-  document.getElementById('frame-right-btn')?.addEventListener('click', () => {
-    const frames = getFrames();
-    if (selectedFrame < frames.length - 1) {
-      moveFrame(selectedFrame, selectedFrame + 1);
-      selectedFrame++;
-      renderTimeline();
-    }
+  document.getElementById('paste-frame')?.addEventListener('click', () => {
+    const data = localStorage.getItem('copied-frame');
+    if (!data) return;
+    const frame = JSON.parse(data);
+    addFrame(frame);
+    renderTimeline();
+  });
+
+  document.getElementById('copy-assets')?.addEventListener('click', () => {
+    const sprites = getFrameSprites(selectedFrame);
+    const copyData = sprites.map(s => ({ src: s.img.src, x: s.x, y: s.y }));
+    localStorage.setItem('copied-assets', JSON.stringify(copyData));
+  });
+
+  document.getElementById('paste-assets')?.addEventListener('click', () => {
+    const raw = localStorage.getItem('copied-assets');
+    if (!raw) return;
+    const assets = JSON.parse(raw);
+    assets.forEach(({ src, x, y }) => {
+      const img = new Image();
+      img.src = src;
+      img.onload = () => addCanvasSprite(img, x, y);
+    });
   });
 
   renderTimeline();

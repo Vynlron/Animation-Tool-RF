@@ -61,9 +61,7 @@
         <div class="studio-sidebar transparent-tools">
           <button id="tool-pan" title="Pan Tool">🖐️</button>
           <button id="tool-add-sprite" title="Add Sprite">➕</button>
-          <button id="tool-add-frame" title="Add Frame">🎞️</button>
           <button id="tool-toggle-grid" title="Toggle Grid">🔲</button>
-          <button id="tool-toggle-play" title="Play">▶️</button>
           <input type="file" id="sprite-loader" accept="image/*" style="display: none;">
         </div>
 
@@ -82,12 +80,20 @@
       </div>
     </div>
 
-    <div class="frame-timeline floating-timeline">
-      <button id="frame-left-btn" title="Move frame left">◀️</button>
-      <div id="frame-list" class="frame-list"></div>
-      <button id="frame-right-btn" title="Move frame right">▶️</button>
-      <button id="frame-delete-btn" title="Delete frame">🗑️</button>
-    </div>
+    <div class="frame-panel">
+  <div class="frame-controls-row">
+    <label>Duration: <input type="number" id="frame-duration" value="100" /></label>
+    <button id="add-frame">＋</button>
+    <button id="remove-frame">－</button>
+    <button id="tool-toggle-play" title="Play">▶️</button>
+    <button id="copy-frame">Copy Frame</button>
+    <button id="paste-frame">Paste Frame</button>
+    <button id="copy-assets">Copy Assets</button>
+    <button id="paste-assets">Paste Assets</button>
+  </div>
+  <div class="frame-grid" id="frame-list"></div>
+</div>
+
   </main>
 
   <!-- General Modal -->
@@ -101,6 +107,7 @@
       </div>
     </div>
   </div>
+  
 
   <script type="module" src="js/main.js"></script>
 </body>
