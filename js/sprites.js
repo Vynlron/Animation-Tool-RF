@@ -1,6 +1,8 @@
 import { addCanvasSprite, screenToWorld } from '../studio/studio.js';
 
 let isDraggingFromPalette = false;
+let lastClickTime = 0;
+const CLICK_DEBOUNCE = 200; // ms
 
 export async function initSprites() {
   const img = new Image();
@@ -53,7 +55,7 @@ export async function initSprites() {
     el.style.height = '40px';
     el.style.imageRendering = 'pixelated';
 
-    // On drag start, mark we’re dragging from the sprite palette
+    // On drag start, mark we're dragging from the sprite palette
     el.addEventListener('dragstart', ev => {
       isDraggingFromPalette = true;
       ev.dataTransfer.setData('text/plain', JSON.stringify({ src: url, cat, frame }));
@@ -66,9 +68,14 @@ export async function initSprites() {
       }, 10);
     });
 
-    // On click, only add if not dragging
+    // On click, add sprite to current frame only
     el.addEventListener('click', () => {
       if (isDraggingFromPalette) return;
+      
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE) return;
+      lastClickTime = now;
+      
       insertSprite(url, 0, 0);
     });
 
@@ -78,8 +85,14 @@ export async function initSprites() {
 
 function insertSprite(src, x, y) {
   const img = new Image();
+  img.onload = () => {
+    // Ensure image is fully loaded before adding to frame
+    addCanvasSprite(img, x, y);
+  };
+  img.onerror = () => {
+    console.error('Failed to load sprite image:', src);
+  };
   img.src = src;
-  img.onload = () => addCanvasSprite(img, x, y);
 }
 
 export function enableDrop(canvas) {
@@ -91,9 +104,10 @@ export function enableDrop(canvas) {
 
     const data = JSON.parse(e.dataTransfer.getData('text/plain'));
     const pos = screenToWorld(e.offsetX, e.offsetY);
+    
+    // Change: This will now add sprite to current frame only
     insertSprite(data.src, pos.x, pos.y);
 
-    // Never add frame here!
     isDraggingFromPalette = false;
   });
 }

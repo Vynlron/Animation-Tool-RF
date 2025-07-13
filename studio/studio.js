@@ -7,7 +7,8 @@ let zoomLevel = 2;
 const minZoom = 0.5;
 const maxZoom = 6;
 let canvasRef = null;
-const sprites = [];
+// Change: Store sprites per frame instead of globally
+const frameSprites = new Map(); // frameIndex -> array of sprites
 let layersEl = null;
 
 let offsetX = 0;
@@ -25,6 +26,9 @@ export function initStudio(canvasElement) {
   canvasElement.width = window.innerWidth;
   canvasElement.height = window.innerHeight;
   ctx = canvasElement.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.webkitImageSmoothingEnabled = false;
+  ctx.mozImageSmoothingEnabled = false;
   lastTime = performance.now();
 
   window.addEventListener('resize', () => {
@@ -122,8 +126,15 @@ function loop(time) {
     rfAni.draw(ctx, 0, 0, 1);
   }
 
-  for (const s of sprites) {
-    ctx.drawImage(s.img, s.x, s.y);
+  // Change: Draw sprites for current frame only
+  if (rfAni) {
+    const currentFrameSprites = frameSprites.get(rfAni.index) || [];
+    for (const s of currentFrameSprites) {
+      // Only draw if image is fully loaded
+      if (s.img.complete && s.img.naturalWidth > 0) {
+        ctx.drawImage(s.img, s.x, s.y);
+      }
+    }
   }
 
   ctx.restore();
@@ -136,6 +147,29 @@ export function loadAnimation(data, onReady) {
   img.src = 'assets/' + data.image;
   img.onload = () => {
     rfAni = new RfAni(img, data.frameWidth, data.frameHeight, data.frames, data.speed, data.name || 'Unnamed', data.image);
+    
+    // Change: Load per-frame sprites if they exist in the data
+    if (data.frameSprites) {
+      frameSprites.clear();
+      for (const [frameIndex, sprites] of Object.entries(data.frameSprites)) {
+        const spritePromises = sprites.map(spriteData => {
+          return new Promise((resolve) => {
+            const img = new Image();
+            img.src = spriteData.src;
+            img.onload = () => resolve({
+              img,
+              x: spriteData.x,
+              y: spriteData.y
+            });
+          });
+        });
+        
+        Promise.all(spritePromises).then(loadedSprites => {
+          frameSprites.set(parseInt(frameIndex), loadedSprites);
+        });
+      }
+    }
+    
     if (onReady) onReady();
   };
   img.onerror = () => alert("Failed to load image: " + data.image);
@@ -158,6 +192,22 @@ export function removeFrame(index) {
   if (index < 0 || index >= frames.length) return;
   frames.splice(index, 1);
   rfAni.setFrames(frames);
+  
+  // Change: Remove sprites for this frame and shift remaining frames
+  frameSprites.delete(index);
+  const newFrameSprites = new Map();
+  for (const [frameIndex, sprites] of frameSprites) {
+    if (frameIndex > index) {
+      newFrameSprites.set(frameIndex - 1, sprites);
+    } else {
+      newFrameSprites.set(frameIndex, sprites);
+    }
+  }
+  frameSprites.clear();
+  for (const [frameIndex, sprites] of newFrameSprites) {
+    frameSprites.set(frameIndex, sprites);
+  }
+  
   if (rfAni.index >= frames.length) rfAni.index = frames.length > 0 ? frames.length - 1 : 0;
 }
 
@@ -170,6 +220,13 @@ export function moveFrame(oldIndex, newIndex) {
   frames.splice(newIndex, 0, f);
   rfAni.setFrames(frames);
   rfAni.index = newIndex;
+  
+  // Change: Move sprites along with the frame
+  const sprites = frameSprites.get(oldIndex);
+  frameSprites.delete(oldIndex);
+  if (sprites) {
+    frameSprites.set(newIndex, sprites);
+  }
 }
 
 export function createFramePreview(index, scale = 2) {
@@ -195,6 +252,19 @@ export function createFramePreview(index, scale = 2) {
   const sx = frame[0] * rfAni.frameWidth;
   const sy = frame[1] * rfAni.frameHeight;
   c.drawImage(rfAni.image, sx, sy, rfAni.frameWidth, rfAni.frameHeight, 0, 0, canvas.width, canvas.height);
+  
+  // Change: Also draw sprites for this frame in the preview
+  const sprites = frameSprites.get(index) || [];
+  for (const s of sprites) {
+    const spriteScale = scale / 1; // Adjust sprite scale for preview
+    c.drawImage(s.img, 
+      (s.x + rfAni.frameWidth/2) * spriteScale, 
+      (s.y + rfAni.frameHeight/2) * spriteScale,
+      s.img.width * spriteScale,
+      s.img.height * spriteScale
+    );
+  }
+  
   return canvas;
 }
 
@@ -209,6 +279,12 @@ export function addFrame(frame = null) {
   }
 
   rfAni.setFrames(frames);
+  
+  // Change: Initialize empty sprite array for new frame
+  const newFrameIndex = frames.length - 1;
+  if (!frameSprites.has(newFrameIndex)) {
+    frameSprites.set(newFrameIndex, []);
+  }
 }
 
 export function setSpeed(speed) {
@@ -221,18 +297,45 @@ export function setName(name) {
 
 export function getAnimationData() {
   if (!rfAni) return null;
+  
+  // Change: Include per-frame sprites in the data
+  const frameSpritesData = {};
+  for (const [frameIndex, sprites] of frameSprites) {
+    frameSpritesData[frameIndex] = sprites.map(sprite => ({
+      src: sprite.img.src,
+      x: sprite.x,
+      y: sprite.y
+    }));
+  }
+  
   return {
     name: rfAni.name,
     image: rfAni.imageName,
     frameWidth: rfAni.frameWidth,
     frameHeight: rfAni.frameHeight,
     frames: rfAni.frames.slice(),
-    speed: rfAni.speed
+    speed: rfAni.speed,
+    frameSprites: frameSpritesData
   };
 }
 
+// Change: Add sprite to current frame only
 export function addCanvasSprite(img, x = 0, y = 0) {
-  sprites.push({ img, x, y });
+  if (!rfAni) return;
+  
+  // Ensure image is loaded before adding
+  if (!img.complete || img.naturalWidth === 0) {
+    console.warn('Attempting to add sprite before image is loaded');
+    return;
+  }
+  
+  const currentFrame = rfAni.index;
+  
+  if (!frameSprites.has(currentFrame)) {
+    frameSprites.set(currentFrame, []);
+  }
+  
+  frameSprites.get(currentFrame).push({ img, x, y });
 }
 
 export function screenToWorld(x, y) {
@@ -245,8 +348,11 @@ export function screenToWorld(x, y) {
 }
 
 export function getSpriteAtPoint(x, y) {
-  for (let i = sprites.length - 1; i >= 0; i--) {
-    const s = sprites[i];
+  if (!rfAni) return null;
+  
+  const currentFrameSprites = frameSprites.get(rfAni.index) || [];
+  for (let i = currentFrameSprites.length - 1; i >= 0; i--) {
+    const s = currentFrameSprites[i];
     if (
       x >= s.x &&
       x <= s.x + s.img.width &&
@@ -259,6 +365,44 @@ export function getSpriteAtPoint(x, y) {
   return null;
 }
 
+// Change: New function to remove sprite from current frame
+export function removeSpriteFromCurrentFrame(sprite) {
+  if (!rfAni) return;
+  const currentFrame = rfAni.index;
+  const sprites = frameSprites.get(currentFrame) || [];
+  const index = sprites.indexOf(sprite);
+  if (index > -1) {
+    sprites.splice(index, 1);
+  }
+}
+
+// Change: New function to copy sprites from one frame to another
+export function copySpritesToFrame(fromFrame, toFrame) {
+  if (!rfAni) return;
+  const sourceSprites = frameSprites.get(fromFrame) || [];
+  const copiedSprites = sourceSprites.map(sprite => ({
+    img: sprite.img,
+    x: sprite.x,
+    y: sprite.y
+  }));
+  frameSprites.set(toFrame, copiedSprites);
+}
+
+// Change: New function to get sprites for a specific frame
+export function getFrameSprites(frameIndex) {
+  return frameSprites.get(frameIndex) || [];
+}
+
 export function setRfAni(instance) {
   rfAni = instance;
+
+  // Add frame 0 if animation has no frames yet
+  if (rfAni.frames.length === 0) {
+    rfAni.setFrames([[-1, -1]]);
+  }
+
+  // Initialize sprite array for frame 0 if not already
+  if (!frameSprites.has(0)) {
+    frameSprites.set(0, []);
+  }
 }
