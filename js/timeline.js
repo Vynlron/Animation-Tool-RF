@@ -1,6 +1,16 @@
-import { getFrames, setFrameIndex, removeFrame, moveFrame, createFramePreview, addFrame } from '../studio/studio.js';
+import {
+  getFrames,
+  setFrameIndex,
+  removeFrame,
+  moveFrame,
+  createFramePreview,
+  addFrame,
+  copySpritesToFrame
+} from '../studio/studio.js';
 
 let selectedFrame = 0;
+let copiedFrame = null;
+let copiedAssetsFrom = null;
 
 export function renderTimeline() {
   const container = document.getElementById('frame-list');
@@ -26,47 +36,90 @@ export function renderTimeline() {
       item.appendChild(preview);
     }
 
-    const del = document.createElement('button');
-    del.innerText = '✖';
-    del.onclick = (e) => {
-      e.stopPropagation();
-      removeFrame(index);
-      if (selectedFrame >= frames.length - 1) selectedFrame = Math.max(0, frames.length - 2);
-      renderTimeline();
-    };
-    item.appendChild(del);
+    const num = document.createElement('div');
+    num.className = 'frame-number';
+    num.textContent = index;
+    item.appendChild(num);
 
     container.appendChild(item);
   });
 }
 
 export function initTimeline() {
-  document.getElementById('tool-add-frame')?.addEventListener('click', () => {
-    addFrame(); // Empty frame
-    renderTimeline();
+  const playToggle = document.getElementById('tool-toggle-play');
+
+  document.getElementById('play-btn')?.addEventListener('click', () => {
+    playToggle?.click();
   });
 
-  document.getElementById('frame-delete-btn')?.addEventListener('click', () => {
+  document.getElementById('stop-btn')?.addEventListener('click', () => {
+    if (window.isPlaybackEnabled && window.isPlaybackEnabled()) {
+      playToggle?.click();
+    }
+  });
+
+  document.getElementById('copy-btn')?.addEventListener('click', () => {
+    const frames = getFrames();
+    copiedFrame = frames[selectedFrame]?.slice();
+  });
+
+  document.getElementById('cut-btn')?.addEventListener('click', () => {
+    const frames = getFrames();
+    copiedFrame = frames[selectedFrame]?.slice();
     removeFrame(selectedFrame);
     selectedFrame = Math.max(0, selectedFrame - 1);
     renderTimeline();
   });
 
-  document.getElementById('frame-left-btn')?.addEventListener('click', () => {
-    if (selectedFrame > 0) {
-      moveFrame(selectedFrame, selectedFrame - 1);
-      selectedFrame--;
-      renderTimeline();
+  document.getElementById('paste-btn')?.addEventListener('click', () => {
+    if (!copiedFrame) return;
+    addFrame(copiedFrame.slice());
+    const frames = getFrames();
+    moveFrame(frames.length - 1, selectedFrame + 1);
+    selectedFrame++;
+    renderTimeline();
+  });
+
+  document.getElementById('duration-plus')?.addEventListener('click', () => {
+    const input = document.getElementById('duration-input');
+    input.value = parseInt(input.value, 10) + 1;
+  });
+
+  document.getElementById('duration-minus')?.addEventListener('click', () => {
+    const input = document.getElementById('duration-input');
+    input.value = Math.max(0, parseInt(input.value, 10) - 1);
+  });
+
+  document.getElementById('play-frame-btn')?.addEventListener('click', () => {
+    setFrameIndex(selectedFrame);
+  });
+
+  document.getElementById('copy-frame-btn')?.addEventListener('click', () => {
+    const frames = getFrames();
+    copiedFrame = frames[selectedFrame]?.slice();
+  });
+
+  document.getElementById('paste-frame-btn')?.addEventListener('click', () => {
+    if (!copiedFrame) return;
+    addFrame(copiedFrame.slice());
+    const frames = getFrames();
+    moveFrame(frames.length - 1, selectedFrame + 1);
+    renderTimeline();
+  });
+
+  document.getElementById('copy-assets-btn')?.addEventListener('click', () => {
+    copiedAssetsFrom = selectedFrame;
+  });
+
+  document.getElementById('paste-assets-btn')?.addEventListener('click', () => {
+    if (copiedAssetsFrom !== null) {
+      copySpritesToFrame(copiedAssetsFrom, selectedFrame);
     }
   });
 
-  document.getElementById('frame-right-btn')?.addEventListener('click', () => {
-    const frames = getFrames();
-    if (selectedFrame < frames.length - 1) {
-      moveFrame(selectedFrame, selectedFrame + 1);
-      selectedFrame++;
-      renderTimeline();
-    }
+  document.getElementById('frame-list')?.addEventListener('wheel', (e) => {
+    const container = e.currentTarget;
+    container.scrollLeft += e.deltaY;
   });
 
   renderTimeline();
