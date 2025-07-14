@@ -16,8 +16,8 @@ h2 {
 
 /* Card grid */
 .card-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  display: flex; /* Changed from grid to flex */
+  flex-wrap: wrap; /* Allows cards to wrap on smaller screens */
   gap: 24px;
 }
 

@@ -1,20 +1,42 @@
 import { RfAni } from '../engine/rfani.js';
+import { isPlaybackEnabled, isLoopingEnabled, pausePlayback } from '../js/tools.js';
+import { UndoRedoManager } from './UndoRedoManager.js';
+
+const historyManager = new UndoRedoManager();
 
 let rfAni = null;
 let ctx = null;
 let lastTime = performance.now();
 let zoomLevel = 2;
 const minZoom = 0.5;
-const maxZoom = 6;
+const maxZoom = 12;
 let canvasRef = null;
-// Change: Store sprites per frame instead of globally
-const frameSprites = new Map(); // frameIndex -> array of sprites
-let layersEl = null;
+const frameSprites = new Map();
+const frameDurations = new Map();
+export let selectedSprite = null;
 
 let offsetX = 0;
 let offsetY = 0;
 
-function updateLayerTransform() {}
+export function saveState() {
+    const currentState = getAnimationData();
+    if (currentState) {
+        historyManager.saveState(currentState);
+    }
+}
+
+export async function loadState(stateData) {
+    if (!stateData) return;
+    const shouldSave = false;
+    loadAnimation(stateData, async () => {
+        const main = await import('../js/main.js');
+        main.updateUIForLoadedAnimation(stateData);
+    }, shouldSave);
+}
+
+export function setSelectedSprite(sprite) {
+  selectedSprite = sprite;
+}
 
 export function pan(dx, dy) {
   offsetX += dx / zoomLevel;
@@ -29,6 +51,7 @@ export function initStudio(canvasElement) {
   ctx.imageSmoothingEnabled = false;
   ctx.webkitImageSmoothingEnabled = false;
   ctx.mozImageSmoothingEnabled = false;
+  ctx.msImageSmoothingEnabled = false;
   lastTime = performance.now();
 
   window.addEventListener('resize', () => {
@@ -104,6 +127,7 @@ function loop(time) {
   lastTime = time;
 
   ctx.clearRect(0, 0, canvasRef.width, canvasRef.height);
+  ctx.imageSmoothingEnabled = false;
 
   const centerX = canvasRef.width / 2;
   const centerY = canvasRef.height / 2;
@@ -119,65 +143,116 @@ function loop(time) {
   drawCrosshair(ctx, canvasRef.width, canvasRef.height, zoomLevel);
 
   if (rfAni) {
-    if (window.isPlaybackEnabled ? window.isPlaybackEnabled() : true) {
-      rfAni.update(dt);
-    }
-
-    rfAni.draw(ctx, 0, 0, 1);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 1 / zoomLevel;
+      ctx.setLineDash([4 / zoomLevel, 2 / zoomLevel]);
+      const boxWidth = rfAni.frameWidth;
+      const boxHeight = rfAni.frameHeight;
+      ctx.strokeRect(-boxWidth / 2, -boxHeight / 2, boxWidth, boxHeight);
+      ctx.restore();
   }
 
-  // Change: Draw sprites for current frame only
   if (rfAni) {
+    if (isPlaybackEnabled()) {
+        const currentDuration = frameDurations.get(rfAni.index) ?? rfAni.speed;
+        rfAni.timer += dt;
+        if (rfAni.timer >= currentDuration) {
+            rfAni.timer = 0;
+            const isAtEnd = rfAni.index >= rfAni.frames.length - 1;
+            if (isAtEnd) {
+                if (isLoopingEnabled()) {
+                    rfAni.index = 0;
+                } else {
+                    pausePlayback();
+                }
+            } else {
+                rfAni.index++;
+            }
+        }
+    }
+    rfAni.draw(ctx, 0, 0, 1);
     const currentFrameSprites = frameSprites.get(rfAni.index) || [];
     for (const s of currentFrameSprites) {
-      // Only draw if image is fully loaded
       if (s.img.complete && s.img.naturalWidth > 0) {
-        ctx.drawImage(s.img, s.x, s.y);
+        ctx.save();
+        const drawX = s.x + s.img.width / 2;
+        const drawY = s.y + s.img.height / 2;
+        ctx.translate(drawX, drawY);
+        ctx.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
+        ctx.drawImage(s.img, -s.img.width / 2, -s.img.height / 2);
+        ctx.restore();
       }
+    }
+    if (selectedSprite && currentFrameSprites.includes(selectedSprite)) {
+        ctx.save();
+        ctx.strokeStyle = '#00aaff';
+        ctx.lineWidth = 2 / zoomLevel;
+        const s = selectedSprite;
+        const centerX = s.x + s.img.width / 2;
+        const centerY = s.y + s.img.height / 2;
+        ctx.translate(centerX, centerY);
+        ctx.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
+        ctx.strokeRect(-s.img.width / 2, -s.img.height / 2, s.img.width, s.img.height);
+        ctx.restore();
     }
   }
 
   ctx.restore();
-
   requestAnimationFrame(loop);
 }
 
-export function loadAnimation(data, onReady) {
-  const img = new Image();
-  img.src = 'assets/' + data.image;
-  img.onload = () => {
-    rfAni = new RfAni(img, data.frameWidth, data.frameHeight, data.frames, data.speed, data.name || 'Unnamed', data.image);
-    
-    // Change: Load per-frame sprites if they exist in the data
+export function loadAnimation(data, onReady, shouldSave = true) {
+    frameSprites.clear();
+    frameDurations.clear();
+    const spritePromises = [];
+
     if (data.frameSprites) {
-      frameSprites.clear();
-      for (const [frameIndex, sprites] of Object.entries(data.frameSprites)) {
-        const spritePromises = sprites.map(spriteData => {
-          return new Promise((resolve) => {
-            const img = new Image();
-            img.src = spriteData.src;
-            img.onload = () => resolve({
-              img,
-              x: spriteData.x,
-              y: spriteData.y
+        for (const [frameIndex, sprites] of Object.entries(data.frameSprites)) {
+            const framePromises = sprites.map(spriteData => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.src = spriteData.src;
+                    img.onload = () => resolve({ ...spriteData, img, flipH: spriteData.flipH || false, flipV: spriteData.flipV || false });
+                    img.onerror = () => resolve(null);
+                });
             });
-          });
-        });
-        
-        Promise.all(spritePromises).then(loadedSprites => {
-          frameSprites.set(parseInt(frameIndex), loadedSprites);
-        });
-      }
+            const p = Promise.all(framePromises).then(loadedSprites => {
+                frameSprites.set(parseInt(frameIndex), loadedSprites.filter(s => s));
+            });
+            spritePromises.push(p);
+        }
+    }
+
+    if(data.frameDurations) {
+        for (const [frameIndex, duration] of Object.entries(data.frameDurations)) {
+            frameDurations.set(parseInt(frameIndex), duration);
+        }
     }
     
-    if (onReady) onReady();
-  };
-  img.onerror = () => alert("Failed to load image: " + data.image);
+    Promise.all(spritePromises).then(() => {
+        const image = new Image();
+        if (data.image) {
+            image.src = 'assets/' + data.image;
+        }
+        image.onload = () => {
+            rfAni = new RfAni(image, data.frameWidth, data.frameHeight, data.frames, data.speed, data.name || 'Unnamed', data.image);
+            if (onReady) onReady();
+            if (shouldSave) {
+                historyManager.clear();
+                saveState();
+            }
+        };
+        if (!data.image) {
+            image.onload();
+        }
+    });
 }
 
 export function getFrames() {
   return rfAni ? rfAni.frames : [];
 }
+
 
 export function setFrameIndex(index) {
   if (rfAni) {
@@ -190,13 +265,12 @@ export function removeFrame(index) {
   if (!rfAni) return;
   const frames = rfAni.frames.slice();
   if (index < 0 || index >= frames.length) return;
+  
   frames.splice(index, 1);
   rfAni.setFrames(frames);
-  
-  // Change: Remove sprites for this frame and shift remaining frames
   frameSprites.delete(index);
   const newFrameSprites = new Map();
-  for (const [frameIndex, sprites] of frameSprites) {
+  for (const [frameIndex, sprites] of frameSprites.entries()) {
     if (frameIndex > index) {
       newFrameSprites.set(frameIndex - 1, sprites);
     } else {
@@ -204,110 +278,133 @@ export function removeFrame(index) {
     }
   }
   frameSprites.clear();
-  for (const [frameIndex, sprites] of newFrameSprites) {
+  for (const [frameIndex, sprites] of newFrameSprites.entries()) {
     frameSprites.set(frameIndex, sprites);
   }
-  
   if (rfAni.index >= frames.length) rfAni.index = frames.length > 0 ? frames.length - 1 : 0;
+  saveState();
 }
 
 export function moveFrame(oldIndex, newIndex) {
   if (!rfAni) return;
   const frames = rfAni.frames.slice();
-  if (oldIndex < 0 || oldIndex >= frames.length) return;
-  if (newIndex < 0 || newIndex >= frames.length) return;
+  if (oldIndex < 0 || oldIndex >= frames.length || newIndex < 0 || newIndex >= frames.length) return;
+
   const [f] = frames.splice(oldIndex, 1);
   frames.splice(newIndex, 0, f);
   rfAni.setFrames(frames);
   rfAni.index = newIndex;
-  
-  // Change: Move sprites along with the frame
-  const sprites = frameSprites.get(oldIndex);
-  frameSprites.delete(oldIndex);
-  if (sprites) {
-    frameSprites.set(newIndex, sprites);
+  const tempSpriteList = [];
+  for (let i = 0; i < frames.length; i++) {
+    tempSpriteList.push(frameSprites.get(i));
   }
+  const [movedSprites] = tempSpriteList.splice(oldIndex, 1);
+  tempSpriteList.splice(newIndex, 0, movedSprites);
+  frameSprites.clear();
+  tempSpriteList.forEach((sprites, i) => {
+    if (sprites) {
+      frameSprites.set(i, sprites);
+    }
+  });
+  saveState();
 }
 
 export function createFramePreview(index, scale = 2) {
-  if (!rfAni) return null;
-  const frame = rfAni.frames[index];
-  if (!frame) return null;
+    if (!rfAni) return null;
+    const frame = rfAni.frames[index];
+    if (!frame) return null;
 
-  const canvas = document.createElement('canvas');
-  canvas.width = rfAni.frameWidth * scale;
-  canvas.height = rfAni.frameHeight * scale;
-  const c = canvas.getContext('2d');
+    const canvas = document.createElement('canvas');
+    canvas.width = rfAni.frameWidth * scale;
+    canvas.height = rfAni.frameHeight * scale;
+    const c = canvas.getContext('2d');
+    c.imageSmoothingEnabled = false;
 
-  if (frame[0] < 0 || frame[1] < 0) {
-    // Show empty frame preview
-    c.fillStyle = '#222';
-    c.fillRect(0, 0, canvas.width, canvas.height);
-    c.fillStyle = '#aaa';
-    c.font = '10px sans-serif';
-    c.fillText('Empty', 4, 12);
+    if (rfAni.image && rfAni.image.complete && frame[0] >= 0 && frame[1] >= 0) {
+        const sx = frame[0] * rfAni.frameWidth;
+        const sy = frame[1] * rfAni.frameHeight;
+        c.drawImage(rfAni.image, sx, sy, rfAni.frameWidth, rfAni.frameHeight, 0, 0, canvas.width, canvas.height);
+    } else {
+        c.fillStyle = '#111';
+        c.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    const sprites = frameSprites.get(index) || [];
+
+    c.save();
+    c.translate(canvas.width / 2, canvas.height / 2);
+
+    for (const s of sprites) {
+        if (s.img.complete && s.img.naturalWidth > 0) {
+            c.save();
+            const centerX = s.x + s.img.width / 2;
+            const centerY = s.y + s.img.height / 2;
+            c.translate(centerX * scale, centerY * scale);
+            c.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
+            c.drawImage(
+                s.img,
+                (-s.img.width / 2) * scale,
+                (-s.img.height / 2) * scale,
+                s.img.width * scale,
+                s.img.height * scale
+            );
+            c.restore();
+        }
+    }
+    c.restore();
     return canvas;
-  }
-
-  const sx = frame[0] * rfAni.frameWidth;
-  const sy = frame[1] * rfAni.frameHeight;
-  c.drawImage(rfAni.image, sx, sy, rfAni.frameWidth, rfAni.frameHeight, 0, 0, canvas.width, canvas.height);
-  
-  // Change: Also draw sprites for this frame in the preview
-  const sprites = frameSprites.get(index) || [];
-  for (const s of sprites) {
-    const spriteScale = scale / 1; // Adjust sprite scale for preview
-    c.drawImage(s.img, 
-      (s.x + rfAni.frameWidth/2) * spriteScale, 
-      (s.y + rfAni.frameHeight/2) * spriteScale,
-      s.img.width * spriteScale,
-      s.img.height * spriteScale
-    );
-  }
-  
-  return canvas;
 }
 
-export function addFrame(frame = null) {
+export function addFrame(frame = null, initialSprites = null) {
   if (!rfAni) return;
   const frames = rfAni.frames.slice();
-
   if (!frame || !Array.isArray(frame) || frame.length !== 2) {
-    frames.push([-1, -1]); // Placeholder for empty frame
+    frames.push([-1, -1]);
   } else {
     frames.push(frame);
   }
-
   rfAni.setFrames(frames);
-  
-  // Change: Initialize empty sprite array for new frame
   const newFrameIndex = frames.length - 1;
-  if (!frameSprites.has(newFrameIndex)) {
-    frameSprites.set(newFrameIndex, []);
+
+  if (initialSprites && initialSprites.length > 0) {
+    const spritePromises = initialSprites.map(spriteData => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.src = spriteData.src;
+        img.onload = () => resolve({ img, x: spriteData.x, y: spriteData.y, flipH: spriteData.flipH || false, flipV: spriteData.flipV || false });
+        img.onerror = () => resolve(null);
+      });
+    });
+    Promise.all(spritePromises).then(loadedSprites => {
+      frameSprites.set(newFrameIndex, loadedSprites.filter(s => s !== null));
+      saveState();
+    });
+  } else {
+    if (!frameSprites.has(newFrameIndex)) {
+      frameSprites.set(newFrameIndex, []);
+    }
+    saveState();
   }
+  frameDurations.set(newFrameIndex, 100);
 }
 
 export function setSpeed(speed) {
   if (rfAni) rfAni.setSpeed(speed);
-}
-
-export function setName(name) {
-  if (rfAni) rfAni.setName(name);
+  saveState();
 }
 
 export function getAnimationData() {
   if (!rfAni) return null;
-  
-  // Change: Include per-frame sprites in the data
   const frameSpritesData = {};
-  for (const [frameIndex, sprites] of frameSprites) {
+  for (const [frameIndex, sprites] of frameSprites.entries()) {
     frameSpritesData[frameIndex] = sprites.map(sprite => ({
       src: sprite.img.src,
       x: sprite.x,
-      y: sprite.y
+      y: sprite.y,
+      flipH: sprite.flipH,
+      flipV: sprite.flipV
     }));
   }
-  
   return {
     name: rfAni.name,
     image: rfAni.imageName,
@@ -315,27 +412,20 @@ export function getAnimationData() {
     frameHeight: rfAni.frameHeight,
     frames: rfAni.frames.slice(),
     speed: rfAni.speed,
-    frameSprites: frameSpritesData
+    frameSprites: frameSpritesData,
+    frameDurations: Object.fromEntries(frameDurations)
   };
 }
 
-// Change: Add sprite to current frame only
 export function addCanvasSprite(img, x = 0, y = 0) {
   if (!rfAni) return;
-  
-  // Ensure image is loaded before adding
-  if (!img.complete || img.naturalWidth === 0) {
-    console.warn('Attempting to add sprite before image is loaded');
-    return;
-  }
-  
+  if (!img.complete || img.naturalWidth === 0) return;
   const currentFrame = rfAni.index;
-  
   if (!frameSprites.has(currentFrame)) {
     frameSprites.set(currentFrame, []);
   }
-  
-  frameSprites.get(currentFrame).push({ img, x, y });
+  frameSprites.get(currentFrame).push({ img, x, y, flipH: false, flipV: false });
+  saveState();
 }
 
 export function screenToWorld(x, y) {
@@ -347,25 +437,50 @@ export function screenToWorld(x, y) {
   };
 }
 
+const hitCanvas = document.createElement('canvas');
+const hitCtx = hitCanvas.getContext('2d');
+
 export function getSpriteAtPoint(x, y) {
-  if (!rfAni) return null;
-  
-  const currentFrameSprites = frameSprites.get(rfAni.index) || [];
-  for (let i = currentFrameSprites.length - 1; i >= 0; i--) {
-    const s = currentFrameSprites[i];
-    if (
-      x >= s.x &&
-      x <= s.x + s.img.width &&
-      y >= s.y &&
-      y <= s.y + s.img.height
-    ) {
-      return s;
+    if (!rfAni) return null;
+    const currentFrameSprites = frameSprites.get(rfAni.index) || [];
+
+    for (let i = currentFrameSprites.length - 1; i >= 0; i--) {
+        const s = currentFrameSprites[i];
+        
+        // Broad phase check
+        if (x >= s.x && x <= s.x + s.img.width && y >= s.y && y <= s.y + s.img.height) {
+            
+            // Narrow phase check (pixel perfect)
+            hitCanvas.width = s.img.width;
+            hitCanvas.height = s.img.height;
+            
+            hitCtx.clearRect(0, 0, hitCanvas.width, hitCanvas.height);
+            hitCtx.save();
+            if(s.flipH || s.flipV) {
+                hitCtx.translate(s.img.width / 2, s.img.height / 2);
+                hitCtx.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
+                hitCtx.drawImage(s.img, -s.img.width / 2, -s.img.height / 2);
+            } else {
+                hitCtx.drawImage(s.img, 0, 0);
+            }
+            hitCtx.restore();
+
+            // Calculate the position of the click relative to the sprite's image data
+            let localX = Math.floor(x - s.x);
+            let localY = Math.floor(y - s.y);
+
+            // Get the pixel data from the temporary canvas
+            const pixelData = hitCtx.getImageData(localX, localY, 1, 1).data;
+
+            // Check the alpha channel (the 4th value)
+            if (pixelData[3] > 0) {
+                return s; // Clicked on a non-transparent pixel
+            }
+        }
     }
-  }
-  return null;
+    return null;
 }
 
-// Change: New function to remove sprite from current frame
 export function removeSpriteFromCurrentFrame(sprite) {
   if (!rfAni) return;
   const currentFrame = rfAni.index;
@@ -373,36 +488,75 @@ export function removeSpriteFromCurrentFrame(sprite) {
   const index = sprites.indexOf(sprite);
   if (index > -1) {
     sprites.splice(index, 1);
+    saveState();
   }
 }
 
-// Change: New function to copy sprites from one frame to another
 export function copySpritesToFrame(fromFrame, toFrame) {
   if (!rfAni) return;
   const sourceSprites = frameSprites.get(fromFrame) || [];
-  const copiedSprites = sourceSprites.map(sprite => ({
-    img: sprite.img,
-    x: sprite.x,
-    y: sprite.y
-  }));
+  const copiedSprites = sourceSprites.map(sprite => ({ ...sprite }));
   frameSprites.set(toFrame, copiedSprites);
+  saveState();
 }
 
-// Change: New function to get sprites for a specific frame
 export function getFrameSprites(frameIndex) {
   return frameSprites.get(frameIndex) || [];
 }
 
 export function setRfAni(instance) {
   rfAni = instance;
-
-  // Add frame 0 if animation has no frames yet
-  if (rfAni.frames.length === 0) {
+  if (rfAni && rfAni.frames.length === 0) {
     rfAni.setFrames([[-1, -1]]);
   }
-
-  // Initialize sprite array for frame 0 if not already
   if (!frameSprites.has(0)) {
     frameSprites.set(0, []);
   }
+}
+
+export function setFrameDuration(index, duration) {
+  frameDurations.set(index, duration);
+  saveState();
+}
+
+export function getFrameDuration(index) {
+  return frameDurations.get(index) ?? 100;
+}
+
+export function setFrameWidth(width) {
+  if (rfAni && width > 0) {
+    rfAni.frameWidth = width;
+    saveState();
+  }
+}
+
+export function setFrameHeight(height) {
+  if (rfAni && height > 0) {
+    rfAni.frameHeight = height;
+    saveState();
+  }
+}
+
+export function moveSpriteLayer(sprite, direction) {
+  if (!rfAni || !sprite) return;
+  const currentFrame = rfAni.index;
+  const sprites = frameSprites.get(currentFrame) || [];
+  const index = sprites.indexOf(sprite);
+  if (index === -1) return;
+  const newIndex = index + direction;
+  if (newIndex >= 0 && newIndex < sprites.length) {
+    sprites.splice(index, 1);
+    sprites.splice(newIndex, 0, sprite);
+    saveState();
+  }
+}
+
+export function undo() {
+    const prevState = historyManager.undo();
+    if (prevState) loadState(prevState);
+}
+
+export function redo() {
+    const nextState = historyManager.redo();
+    if (nextState) loadState(nextState);
 }

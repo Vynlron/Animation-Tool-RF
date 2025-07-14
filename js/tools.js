@@ -1,12 +1,39 @@
-import { pan, addCanvasSprite, screenToWorld, getSpriteAtPoint } from '../studio/studio.js';
+import { 
+    pan, 
+    addCanvasSprite, 
+    screenToWorld, 
+    getSpriteAtPoint, 
+    removeSpriteFromCurrentFrame, 
+    selectedSprite, 
+    setSelectedSprite,
+    moveSpriteLayer,
+    undo,
+    redo,
+    saveState
+} from '../studio/studio.js';
+import { addSpriteToPanel } from './sprites.js';
 
 let isGridVisible = true;
-let isPlaying = true;
+let isPlaying = false;
+let isLooping = true;
 let activeTool = '';
 let isPanning = false;
+let isDragging = false;
 let panStart = { x: 0, y: 0 };
-let selectedSprite = null;
 let dragOffset = { x: 0, y: 0 };
+
+function updateSpriteOptionsPanel() {
+  const panel = document.getElementById('sprite-options');
+  const timeline = document.querySelector('.frame-panel');
+
+  if (selectedSprite) {
+    const timelineHeight = timeline.offsetHeight;
+    panel.style.bottom = `${timelineHeight + 10}px`;
+    panel.style.display = 'flex';
+  } else {
+    panel.style.display = 'none';
+  }
+}
 
 export function initTools(canvas) {
   function setActiveTool(id) {
@@ -22,15 +49,26 @@ export function initTools(canvas) {
     isGridVisible = !isGridVisible;
   });
 
-  const playBtn = document.getElementById('tool-toggle-play');
-  playBtn.textContent = isPlaying ? '⏸️' : '▶️';
-  playBtn.addEventListener('click', () => {
-    isPlaying = !isPlaying;
-    playBtn.textContent = isPlaying ? '⏸️' : '▶️';
+  document.getElementById('play-btn').addEventListener('click', () => {
+    isPlaying = true;
+  });
+
+  document.getElementById('pause-btn').addEventListener('click', () => {
+    isPlaying = false;
+  });
+
+  const loopToggle = document.getElementById('loop-toggle');
+  loopToggle.checked = isLooping;
+  loopToggle.addEventListener('change', () => {
+    isLooping = loopToggle.checked;
   });
 
   document.getElementById('tool-add-sprite').addEventListener('click', () => {
     setActiveTool('tool-add-sprite');
+    document.getElementById('sprite-loader').click();
+  });
+  
+  document.getElementById('add-sprite-right-btn').addEventListener('click', () => {
     document.getElementById('sprite-loader').click();
   });
 
@@ -40,30 +78,76 @@ export function initTools(canvas) {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
-      img.src = reader.result;
-      img.onload = () => addCanvasSprite(img, 0, 0);
+      const newSpriteSrc = reader.result;
+      img.src = newSpriteSrc;
+      img.onload = () => {
+        addCanvasSprite(img, 0, 0);
+        addSpriteToPanel(newSpriteSrc);
+      };
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   });
 
   document.getElementById('tool-pan').addEventListener('click', () => {
     setActiveTool('tool-pan');
   });
+  
+  document.getElementById('flip-h').addEventListener('click', () => {
+      if (selectedSprite) {
+          selectedSprite.flipH = !selectedSprite.flipH;
+          saveState();
+      }
+  });
+  
+  document.getElementById('flip-v').addEventListener('click', () => {
+      if (selectedSprite) {
+          selectedSprite.flipV = !selectedSprite.flipV;
+          saveState();
+      }
+  });
+
+  document.getElementById('layer-up').addEventListener('click', () => {
+      if (selectedSprite) {
+          moveSpriteLayer(selectedSprite, 1);
+      }
+  });
+
+  document.getElementById('layer-down').addEventListener('click', () => {
+      if (selectedSprite) {
+          moveSpriteLayer(selectedSprite, -1);
+      }
+  });
+
+  document.getElementById('delete-selected-sprite').addEventListener('click', () => {
+      if (selectedSprite) {
+          removeSpriteFromCurrentFrame(selectedSprite);
+          setSelectedSprite(null);
+          updateSpriteOptionsPanel();
+      }
+  });
 
   canvas.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
     const pos = screenToWorld(e.offsetX, e.offsetY);
     const sprite = getSpriteAtPoint(pos.x, pos.y);
-    if (sprite && e.button === 0) {
-      selectedSprite = sprite;
+
+    if (sprite) {
+      setSelectedSprite(sprite);
+      isDragging = true;
       dragOffset = { x: pos.x - sprite.x, y: pos.y - sprite.y };
-    } else if (activeTool === 'tool-pan' && e.button === 0) {
-      isPanning = true;
-      panStart = { x: e.clientX, y: e.clientY };
+    } else {
+      setSelectedSprite(null);
+      if (activeTool === 'tool-pan') {
+        isPanning = true;
+        panStart = { x: e.clientX, y: e.clientY };
+      }
     }
+    updateSpriteOptionsPanel();
   });
 
   document.addEventListener('mousemove', (e) => {
-    if (selectedSprite) {
+    if (isDragging && selectedSprite) {
       const rect = canvas.getBoundingClientRect();
       const pos = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
       selectedSprite.x = pos.x - dragOffset.x;
@@ -76,16 +160,73 @@ export function initTools(canvas) {
     }
   });
 
-  document.addEventListener('mouseup', () => {
+  document.addEventListener('mouseup', (e) => {
+    if (isDragging) {
+        saveState();
+    }
     isPanning = false;
-    selectedSprite = null;
+    isDragging = false;
   });
 
   canvas.addEventListener('dragover', (e) => e.preventDefault());
+  
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'z') {
+            e.preventDefault();
+            undo();
+            return;
+        }
+        if (e.key === 'y') {
+            e.preventDefault();
+            redo();
+            return;
+        }
+    }
+
+    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+      return;
+    }
+
+    if (selectedSprite) {
+      let moved = false;
+      switch (e.key) {
+        case 'ArrowUp':   selectedSprite.y -= 1; moved = true; break;
+        case 'ArrowDown': selectedSprite.y += 1; moved = true; break;
+        case 'ArrowLeft': selectedSprite.x -= 1; moved = true; break;
+        case 'ArrowRight':selectedSprite.x += 1; moved = true; break;
+      }
+      if (moved) {
+        e.preventDefault();
+      }
+    }
+  });
+  
+  window.addEventListener('keyup', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selectedSprite) {
+          saveState();
+      }
+  });
+
+  updateSpriteOptionsPanel();
+
+  window.addEventListener('resize', () => {
+      if (selectedSprite) {
+          updateSpriteOptionsPanel();
+      }
+  });
 }
 
 export function isPlaybackEnabled() {
   return isPlaying;
+}
+
+export function isLoopingEnabled() {
+    return isLooping;
+}
+
+export function pausePlayback() {
+    isPlaying = false;
 }
 
 export function isGridEnabled() {

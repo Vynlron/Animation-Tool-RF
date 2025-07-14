@@ -11,12 +11,33 @@
 </head>
 <body>
   <header>
-    <h1>RfAni Animation Tool</h1>
-    <button class="library-btn" type="button">📂 My Library</button>
+    <div id="studio-info" class="studio-info" style="display: none;">
+      <h2 id="studio-animation-name"></h2>
+      <div class="studio-controls">
+        <label class="speed-label">Speed <input id="speed-slider" type="range" min="50" max="1000" step="10" value="200"></label>
+      </div>
+    </div>
+    
+    <div id="header-actions" class="header-actions" style="display: none;">
+        <button id="export-rfani-btn" title="Save animation to a .rfani file">Export (.rfani)</button>
+        <label class="header-btn-label" title="Load a .rfani file">
+            Import (.rfani)
+            <input type="file" id="import-rfani-input" accept=".rfani,application/json" hidden>
+        </label>
+        <button id="preview-gif-btn" title="Generate a GIF preview">Preview (GIF)</button>
+    </div>
+
+    <div id="header-right-controls" class="header-right-controls" style="display: none;">
+        <label>Width <input id="frame-width-input" type="number" value="20" min="1"></label>
+        <label>Height <input id="frame-height-input" type="number" value="20" min="1"></label>
+        <button id="back-to-menu" class="library-btn" type="button">⬅ Back to Menu</button>
+    </div>
   </header>
 
-  <!-- Main Menu -->
   <main id="main-menu">
+  <div class="menu-container">
+    <h1 class="menu-title">RfAni <span>Animation Tool</span></h1>
+    
     <section>
       <h2>New animation</h2>
       <div class="card-row">
@@ -31,6 +52,7 @@
         </label>
       </div>
     </section>
+
     <section>
       <h2>Last opened</h2>
       <div id="recent-list" class="card-row">
@@ -40,75 +62,80 @@
         </div>
       </div>
     </section>
-  </main>
+  </div>
+</main>
 
-  <!-- Studio -->
+
   <main id="studio" style="display: none;">
-    <div class="studio-header">
-      <h2 id="studio-animation-name">Unnamed</h2>
-      <div class="studio-controls">
-        <label class="speed-label">Speed <input id="speed-slider" type="range" min="50" max="1000" step="10" value="200"></label>
-        <button id="rename-animation-btn" title="Rename">✏️</button>
-        <button id="export-btn" title="Export">💾</button>
-        <button id="back-to-menu" class="back-btn" type="button">⬅ Back</button>
-      </div>
-    </div>
-
     <div class="studio-container">
       <div class="studio-main fullscreen-grid">
-
-        <!-- Floating transparent tools -->
         <div class="studio-sidebar transparent-tools">
           <button id="tool-pan" title="Pan Tool">🖐️</button>
           <button id="tool-add-sprite" title="Add Sprite">➕</button>
           <button id="tool-toggle-grid" title="Toggle Grid">🔲</button>
           <input type="file" id="sprite-loader" accept="image/*" style="display: none;">
         </div>
-
         <div class="canvas-wrapper">
           <canvas id="preview"></canvas>
         </div>
-
-        <!-- Floating sprite panel on the right -->
-        <div class="sprite-panel transparent-sprite-panel" id="sprite-selector-panel">
-          <h3>Sprites</h3>
-          <ul id="sprite-list">
-            <!-- Sprites will be listed here -->
-          </ul>
+        
+        <div class="sprite-panel-wrapper">
+            <button id="add-sprite-right-btn" class="add-sprite-btn">Add New Sprite ➕</button>
+            <div class="sprite-panel transparent-sprite-panel" id="sprite-selector-panel">
+              <h3>Sprites</h3>
+            </div>
         </div>
 
       </div>
     </div>
 
+    <div id="sprite-options" class="floating-panel" style="display:none;">
+      <span>Sprite Options:</span>
+      <button id="flip-h">Flip Horizontal</button>
+      <button id="flip-v">Flip Vertical</button>
+      <button id="layer-up">Bring Forward</button>
+      <button id="layer-down">Send Backward</button>
+      <button id="delete-selected-sprite">Delete</button>
+    </div>
     <div class="frame-panel">
-  <div class="frame-controls-row">
-    <label>Duration: <input type="number" id="frame-duration" value="100" /></label>
-    <button id="add-frame">＋</button>
-    <button id="remove-frame">－</button>
-    <button id="tool-toggle-play" title="Play">▶️</button>
-    <button id="copy-frame">Copy Frame</button>
-    <button id="paste-frame">Paste Frame</button>
-    <button id="copy-assets">Copy Assets</button>
-    <button id="paste-assets">Paste Assets</button>
-  </div>
-  <div class="frame-grid" id="frame-list"></div>
-</div>
-
+      <div class="frame-controls-row">
+        <label>Duration: <input type="number" id="frame-duration" value="100" /></label>
+        <button id="add-frame">＋</button>
+        <button id="remove-frame">－</button>
+        <button id="play-btn" title="Play">▶️</button>
+        <button id="pause-btn" title="Pause">⏸️</button>
+        <label class="loop-toggle-label"><input type="checkbox" id="loop-toggle"> Loop</label>
+        <button id="copy-frame">Copy Frame</button>
+        <button id="paste-frame">Paste Frame</button>
+      </div>
+      <div class="frame-grid" id="frame-list"></div>
+    </div>
   </main>
 
-  <!-- General Modal -->
   <div id="modal" class="modal hidden">
     <div class="modal-box">
       <h3 id="modal-title">Modal Title</h3>
-      <input type="text" id="modal-input" placeholder="Enter something..." />
+      <div id="modal-content">
+        <input type="text" id="modal-input" placeholder="Enter something..." />
+      </div>
       <div class="modal-buttons">
         <button id="modal-confirm-btn">OK</button>
         <button id="modal-cancel-btn">Cancel</button>
       </div>
     </div>
   </div>
-  
 
+  <div id="preview-modal" class="modal hidden">
+    <div class="modal-box">
+      <h3 id="preview-modal-title"></h3>
+      <div id="preview-modal-content" class="preview-content"></div>
+      <div class="modal-buttons">
+        <button id="preview-modal-close-btn">Close</button>
+      </div>
+    </div>
+  </div>
+  
+  <script type="text/javascript" src="js/lib/gif.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

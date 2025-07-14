@@ -1,36 +1,63 @@
-import { showModal } from '../ui/modal.js';
-import { setSpeed, setName, getAnimationData } from '../studio/studio.js';
+// js/menu.js
 
-export const studioTitle = document.getElementById('studio-animation-name');
-export const speedSlider = document.getElementById('speed-slider');
+function clearSpriteLayers() {
+  document.querySelectorAll('#layers .sprite-layer').forEach(layer => {
+    layer.innerHTML = '';
+  });
+}
 
-export function initStudioControls() {
-  const renameBtn = document.getElementById('rename-animation-btn');
-  const exportBtn = document.getElementById('export-btn');
+export function initMenu({ mainMenu, studio, studioTitle, speedSlider, renderTimeline, loadAnimation, setSpeed, showModal }) {
+  document.getElementById('back-to-menu').addEventListener('click', () => {
+    studio.style.display = 'none';
+    mainMenu.style.display = 'block';
+  });
 
-  renameBtn.addEventListener('click', () => {
+  document.getElementById('new-animation').addEventListener('click', () => {
     showModal({
-      title: 'Rename animation',
-      defaultValue: studioTitle.textContent,
+      title: 'Name your animation',
+      defaultValue: '',
       onConfirm: (name) => {
+        mainMenu.style.display = 'none';
+        studio.style.display = 'block';
         studioTitle.textContent = name;
-        setName(name);
+        clearSpriteLayers();
+
+        const defaultData = {
+          name,
+          image: "", // <-- FIX: This now creates a truly empty animation
+          frameWidth: 20,
+          frameHeight: 20,
+          frames: [],
+          speed: 200
+        };
+
+        loadAnimation(defaultData, renderTimeline);
+        speedSlider.value = defaultData.speed;
+        setSpeed(defaultData.speed);
       }
     });
   });
 
-  exportBtn.addEventListener('click', () => {
-    const data = getAnimationData();
-    if (!data) return;
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = (data.name || 'animation') + '.rfani';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  });
-
-  speedSlider.addEventListener('input', (e) => {
-    setSpeed(parseInt(e.target.value, 10));
+  document.getElementById('rfani-loader').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        mainMenu.style.display = 'none';
+        studio.style.display = 'block';
+        studioTitle.textContent = data.name || 'Unnamed';
+        clearSpriteLayers();
+        loadAnimation(data, renderTimeline);
+        if (typeof data.speed === 'number') {
+          speedSlider.value = data.speed;
+          setSpeed(data.speed);
+        }
+      } catch {
+        alert('Invalid .rfani file!');
+      }
+    };
+    reader.readAsText(file);
   });
 }

@@ -1,27 +1,113 @@
-/* Header */
+/* styles/header.css */
+
 header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 18px 40px;
+  padding: 10px 20px;
   background: rgba(30, 30, 30, 0.8);
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
   z-index: 1000;
+  height: 60px;
 }
 
-h1 {
-  font-size: 22px;
+.studio-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-grow: 1;
+}
+
+.studio-info h2 {
+  font-size: 20px;
   color: #fff;
   font-weight: 500;
+  white-space: nowrap;
+}
+
+.studio-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color: #ccc;
+  font-size: 14px;
+}
+
+.studio-controls label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.studio-controls input {
+  background: #222;
+  border: 1px solid #555;
+  color: #eee;
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+.studio-controls input[type="number"] {
+  width: 50px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.header-actions button,
+.header-btn-label {
+    background: #3a3a3a;
+    border: 1px solid #555;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: sans-serif;
+    transition: background 0.2s ease;
+}
+
+.header-actions button:hover,
+.header-btn-label:hover {
+    background: #505050;
+}
+
+/* New styles for the right-aligned controls */
+.header-right-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: #ccc;
+}
+
+.header-right-controls label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+}
+
+.header-right-controls input {
+    background: #222;
+    border: 1px solid #555;
+    color: #eee;
+    border-radius: 4px;
+    padding: 4px 6px;
+    width: 50px;
 }
 
 .library-btn {
   background: #2f2f2f;
-  padding: 6px 14px;
-  border-radius: 8px;
+  padding: 8px 14px;
+  border-radius: 6px;
   font-size: 14px;
   border: 1px solid #444;
   color: #ddd;
