@@ -33,7 +33,9 @@ let offsetY = 0;
 export function addSpritesheet(name, image) {
     spritesheetSources.set(name, image);
 }
-export function clearSpritesheets() {
+// In studio/studio.js
+
+export function clearSpritesheets() {    
     spritesheetSources.clear();
     // Also clear the animation frames, as they are now invalid.
     frameSprites.clear();
@@ -582,3 +584,13 @@ export function redo() {
     if (nextState) loadState(nextState);
 }
 
+export function getCurrentFrameIndex() {
+    return rfAni ? rfAni.index : 0;
+}
+export function pasteFrameData(index, copiedData) {
+    if (!rfAni || !copiedData || !copiedData.sprites) return;
+
+    // Replace the sprites of the target frame with a deep copy of the copied sprites.
+    frameSprites.set(index, structuredClone(copiedData.sprites));
+    saveState(); // Save the new state for undo/redo
+}

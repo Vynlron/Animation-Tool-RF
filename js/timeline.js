@@ -5,13 +5,19 @@ import {
   moveFrame,
   createFramePreview,
   addFrame,
-  getFrameSprites,
   setFrameDuration,
-  getFrameDuration
+  getFrameDuration,
+  // --- Import functions needed for copy/paste ---
+  getCurrentFrameIndex,
+  getFrameSprites,
+  pasteFrameData
 } from '../studio/studio.js';
 
 let selectedFrame = 0;
 let isTimelineInitialized = false;
+
+// --- Data storage for copy/paste now lives in this file ---
+let copiedFrameData = null;
 
 export function renderTimeline() {
   const container = document.querySelector('.frame-grid');
@@ -46,6 +52,7 @@ export function renderTimeline() {
         updateDurationInput();
         renderTimeline();
       }
+      item.style.borderColor = '';
     };
 
     item.onclick = () => {
@@ -74,11 +81,13 @@ function updateDurationInput() {
 }
 
 export function initTimeline() {
-  // Only initialize the listeners once
   if (isTimelineInitialized) return;
 
   document.getElementById('add-frame')?.addEventListener('click', () => {
     addFrame();
+    selectedFrame = getFrames().length - 1;
+    setFrameIndex(selectedFrame);
+    updateDurationInput();
     renderTimeline();
   });
 
@@ -92,28 +101,35 @@ export function initTimeline() {
   });
 
   document.getElementById('copy-frame')?.addEventListener('click', () => {
-    const frames = getFrames();
-    const baseFrame = frames[selectedFrame];
-    if (!baseFrame) return;
-
-    const sprites = getFrameSprites(selectedFrame);
-    const serializedSprites = sprites.map(s => ({ src: s.img.src, x: s.x, y: s.y }));
-
-    const dataToCopy = {
-      frame: baseFrame,
-      sprites: serializedSprites
-    };
-
-    localStorage.setItem('copied-frame', JSON.stringify(dataToCopy));
+    const index = getCurrentFrameIndex();
+    const sprites = getFrameSprites(index);
+    copiedFrameData = { sprites: sprites };
+    
+    const copyBtn = document.getElementById('copy-frame');
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => { copyBtn.textContent = 'Copy Frame'; }, 1000);
   });
 
+  // --- THIS IS THE UPDATED PASTE LOGIC ---
   document.getElementById('paste-frame')?.addEventListener('click', () => {
-    const data = localStorage.getItem('copied-frame');
-    if (!data) return;
-    const { frame, sprites } = JSON.parse(data);
-    addFrame(frame, sprites);
-    renderTimeline();
+    if (!copiedFrameData) {
+      alert("Nothing to paste. Please copy a frame first.");
+      return;
+    }
+
+    // Get a deep copy of the sprites to paste.
+    const spritesToPaste = structuredClone(copiedFrameData.sprites);
+    
+    // Call addFrame(), passing the copied sprites to populate the new frame.
+    addFrame(null, spritesToPaste);
+
+    // Automatically select the new frame that was just created.
+    selectedFrame = getFrames().length - 1;
+    setFrameIndex(selectedFrame);
+    updateDurationInput();
+    renderTimeline(); 
   });
+  // --- END OF UPDATED LOGIC ---
 
   const durationInput = document.getElementById('frame-duration');
   if (durationInput) {

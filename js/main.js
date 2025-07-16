@@ -55,8 +55,6 @@ function handleModalConfirm() {
     }
 }
 
-
-
 export function showModal({ title, confirmText = 'OK', defaultValue = '', onConfirm }) {
     const modal = document.getElementById('modal');
     const modalTitle = document.getElementById('modal-title');
@@ -101,7 +99,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('preview-modal').classList.add('hidden');
     });
 
-
     async function showStudio(data) {
         await loadAnimation(data, () => {
             updateUIForLoadedAnimation(data);
@@ -124,30 +121,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     initStudio(canvas);
     initTools(canvas);
-    initMultiSpriteLoader(); // <-- This is our new generic function call
+    initMultiSpriteLoader();
     enableDrop(canvas);
     initIOButtons(onAnimationImport, showModal, showContentModal);
     initTimeline();
-
-
-    let copiedFrame = null;
-
-document.getElementById('copy-frame').addEventListener('click', () => {
-    const frames = getAnimationData().frames;
-    const currentIndex = getAnimationData().currentFrame || 0;
-    if (frames[currentIndex]) {
-        copiedFrame = structuredClone(frames[currentIndex]);
-        console.log('Copied frame:', copiedFrame);
-    }
-});
-
-document.getElementById('paste-frame').addEventListener('click', () => {
-    if (!copiedFrame) return;
-    const data = getAnimationData();
-    const currentIndex = data.currentFrame || 0;
-    data.frames[currentIndex] = structuredClone(copiedFrame);
-    renderTimeline();
-});
 
     const widthInput = document.getElementById('frame-width-input');
     const heightInput = document.getElementById('frame-height-input');
@@ -169,19 +146,18 @@ document.getElementById('paste-frame').addEventListener('click', () => {
     backToMenuBtn.addEventListener('click', showMenu);
     
     document.getElementById('new-animation').addEventListener('click', () => {
-    showModal({
-        title: 'Name Your Animation',
-        onConfirm: async (name) => {
-            const newAni = new RfAni(new Image(), 20, 20, [], 200, name, '');
-            setRfAni(newAni);
-            const data = getAnimationData();
-            showStudio(data);
+        showModal({
+            title: 'Name Your Animation',
+            onConfirm: async (name) => {
+                const newAni = new RfAni(new Image(), 20, 20, [], 200, name, '');
+                setRfAni(newAni);
+                const data = getAnimationData();
+                showStudio(data);
 
-            // --- KEY CHANGE: Load default assets after showing the studio ---
-            await loadAndDisplaySheets(defaultSheets);
-        }
+                await loadAndDisplaySheets(defaultSheets);
+            }
+        });
     });
-});
 
     document.getElementById('rfani-loader').addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -203,10 +179,6 @@ document.getElementById('paste-frame').addEventListener('click', () => {
     showMenu();
 });
 
-// In js/main.js
-
-// In js/main.js
-// In js/main.js
 
 export function promptForMissingFiles(requiredFiles) {
     return new Promise((resolve) => {
@@ -214,7 +186,6 @@ export function promptForMissingFiles(requiredFiles) {
         document.getElementById('preview-modal-title').textContent = 'Missing Spritesheets';
         const contentArea = document.getElementById('preview-modal-content');
         
-        // --- NEW UI with classes for custom styling ---
         contentArea.innerHTML = `
             <p>This animation requires the following image files. Please select one for each.</p>
             <div id="file-prompt-list" style="margin: 20px 0; display: grid; gap: 15px; max-width: 450px; margin-left: auto; margin-right: auto;">
@@ -236,21 +207,18 @@ export function promptForMissingFiles(requiredFiles) {
         
         modal.classList.remove('hidden');
 
-        // --- NEW: Add event listeners to display the selected filename ---
         document.querySelectorAll('.missing-file-input').forEach(input => {
             input.addEventListener('change', (event) => {
                 const fileName = event.target.files.length > 0 ? event.target.files[0].name : 'No file chosen';
                 const name = event.target.dataset.name;
                 const displayNameEl = document.getElementById(`file-name-${name}`);
                 displayNameEl.textContent = fileName;
-                // Add a title attribute to see the full name on hover if it's too long
                 displayNameEl.title = fileName; 
             });
         });
 
         const confirmBtn = document.getElementById('missing-files-confirm');
 
-        // This logic for handling the confirmation remains the same
         const confirmAndClose = () => {
             const fileMap = new Map();
             const inputs = document.querySelectorAll('.missing-file-input');

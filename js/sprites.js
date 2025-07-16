@@ -61,40 +61,34 @@ function loadImage(source) {
 }
 
 // --- NEW: A single, powerful function to handle all sheet loading ---
+
 export async function loadAndDisplaySheets(sheetDefs, clearPalette = true) {
+    // --- ADD THIS LINE ---
     const panel = document.getElementById('sprite-selector-panel');
-    // clearSpritesheets();
-    panel.innerHTML = '';
-
-    if (!sheetDefs || sheetDefs.length === 0) return;
-
+    
+    // The incorrect call to clearSpritesheets() is confirmed to be removed here.
+    
     if (clearPalette) {
         panel.innerHTML = '';
     }
 
-    if (!sheetDefs || sheetDefs.length === 0) return;
+    if (!sheetDefs || !sheetDefs.length === 0) return;
 
-    
     try {
         const imagePromises = sheetDefs.map(loadImage);
         const images = await Promise.all(imagePromises);
 
         images.forEach((image, index) => {
             const def = sheetDefs[index];
-            const name = def.name; // This remains the unique ID (the filename)
-            
-            // --- KEY CHANGE HERE ---
-            // Use the displayName for the UI title if it exists, otherwise fall back to the name.
+            const name = def.name;
             const displayName = def.displayName || name;
-            
             addSpritesheet(name, image);
 
             const column = document.createElement('div');
             column.className = 'spritesheet-column';
 
             const title = document.createElement('h3');
-            title.textContent = displayName; // Use the new displayName
-            // --- END KEY CHANGE ---
+            title.textContent = displayName;
             
             const grid = document.createElement('div');
             grid.className = 'sprite-grid';
@@ -123,7 +117,6 @@ export async function loadAndDisplaySheets(sheetDefs, clearPalette = true) {
         alert("There was an error loading the images.");
     }
 }
-
 
 // This function now uses our new central loader.
 export function initMultiSpriteLoader() {
