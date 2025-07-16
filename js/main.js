@@ -12,6 +12,11 @@ import { initMultiSpriteLoader, enableDrop, loadAndDisplaySheets } from './sprit
 import { RfAni } from '../engine/rfani.js';
 import { initIOButtons } from './io.js';
 
+export const defaultSheets = [
+    { name: 'realmforge_head.png', displayName: 'Head', url: '../assets/realmforge_head.png' },
+    { name: 'realmforge_body.png', displayName: 'Body', url: '../assets/realmforge_body.png' }
+];
+
 export function updateUIForLoadedAnimation(data) {
     const studioEl = document.getElementById('studio');
     const menuEl = document.getElementById('main-menu');
@@ -49,6 +54,8 @@ function handleModalConfirm() {
         alert("Please enter a value.");
     }
 }
+
+
 
 export function showModal({ title, confirmText = 'OK', defaultValue = '', onConfirm }) {
     const modal = document.getElementById('modal');
@@ -95,8 +102,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
 
-    function showStudio(data) {
-        loadAnimation(data, () => {
+    async function showStudio(data) {
+        await loadAnimation(data, () => {
             updateUIForLoadedAnimation(data);
         });
     }
@@ -123,6 +130,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     initTimeline();
 
 
+    let copiedFrame = null;
+
+document.getElementById('copy-frame').addEventListener('click', () => {
+    const frames = getAnimationData().frames;
+    const currentIndex = getAnimationData().currentFrame || 0;
+    if (frames[currentIndex]) {
+        copiedFrame = structuredClone(frames[currentIndex]);
+        console.log('Copied frame:', copiedFrame);
+    }
+});
+
+document.getElementById('paste-frame').addEventListener('click', () => {
+    if (!copiedFrame) return;
+    const data = getAnimationData();
+    const currentIndex = data.currentFrame || 0;
+    data.frames[currentIndex] = structuredClone(copiedFrame);
+    renderTimeline();
+});
+
     const widthInput = document.getElementById('frame-width-input');
     const heightInput = document.getElementById('frame-height-input');
 
@@ -145,19 +171,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('new-animation').addEventListener('click', () => {
     showModal({
         title: 'Name Your Animation',
-        onConfirm: async (name) => { // <-- Make this function async
+        onConfirm: async (name) => {
             const newAni = new RfAni(new Image(), 20, 20, [], 200, name, '');
             setRfAni(newAni);
             const data = getAnimationData();
             showStudio(data);
 
             // --- KEY CHANGE: Load default assets after showing the studio ---
-            const defaultSheets = [
-                { name: 'Head', url: '../assets/realmforge_head.png' },
-                { name: 'Body', url: '../assets/realmforge_body.png' }
-            ];
             await loadAndDisplaySheets(defaultSheets);
-            // --- END KEY CHANGE ---
         }
     });
 });
@@ -181,3 +202,73 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     showMenu();
 });
+
+// In js/main.js
+
+// In js/main.js
+// In js/main.js
+
+export function promptForMissingFiles(requiredFiles) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('preview-modal');
+        document.getElementById('preview-modal-title').textContent = 'Missing Spritesheets';
+        const contentArea = document.getElementById('preview-modal-content');
+        
+        // --- NEW UI with classes for custom styling ---
+        contentArea.innerHTML = `
+            <p>This animation requires the following image files. Please select one for each.</p>
+            <div id="file-prompt-list" style="margin: 20px 0; display: grid; gap: 15px; max-width: 450px; margin-left: auto; margin-right: auto;">
+                ${requiredFiles.map(name => `
+                    <div class="file-prompt-item" style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="padding-right: 15px;">${name}</strong>
+                        <div style="display: flex; align-items: center;">
+                            <label for="file-input-${name}" class="modal-btn file-upload-label">Choose File</label>
+                            <span id="file-name-${name}" class="file-name-display">No file chosen</span>
+                        </div>
+                        <input type="file" class="missing-file-input" id="file-input-${name}" data-name="${name}" accept="image/png, image/jpeg" style="display: none;">
+                    </div>
+                `).join('')}
+            </div>
+            <div style="margin-top: 25px;">
+                <button id="missing-files-confirm" class="modal-btn">Load Selected Files</button>
+            </div>
+        `;
+        
+        modal.classList.remove('hidden');
+
+        // --- NEW: Add event listeners to display the selected filename ---
+        document.querySelectorAll('.missing-file-input').forEach(input => {
+            input.addEventListener('change', (event) => {
+                const fileName = event.target.files.length > 0 ? event.target.files[0].name : 'No file chosen';
+                const name = event.target.dataset.name;
+                const displayNameEl = document.getElementById(`file-name-${name}`);
+                displayNameEl.textContent = fileName;
+                // Add a title attribute to see the full name on hover if it's too long
+                displayNameEl.title = fileName; 
+            });
+        });
+
+        const confirmBtn = document.getElementById('missing-files-confirm');
+
+        // This logic for handling the confirmation remains the same
+        const confirmAndClose = () => {
+            const fileMap = new Map();
+            const inputs = document.querySelectorAll('.missing-file-input');
+            inputs.forEach(input => {
+                const requiredName = input.dataset.name;
+                const file = input.files[0];
+                if (file) {
+                    fileMap.set(requiredName, file);
+                }
+            });
+            modal.classList.add('hidden');
+            resolve(fileMap);
+        };
+
+        confirmBtn.addEventListener('click', confirmAndClose, { once: true });
+        
+        document.getElementById('preview-modal-close-btn').addEventListener('click', () => {
+            resolve(new Map());
+        }, { once: true });
+    });
+}

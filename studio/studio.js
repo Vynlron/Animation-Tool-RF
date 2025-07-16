@@ -3,6 +3,8 @@
 import { RfAni } from '../engine/rfani.js';
 import { isPlaybackEnabled, isLoopingEnabled, pausePlayback } from '../js/tools.js';
 import { UndoRedoManager } from './UndoRedoManager.js';
+import { loadAndDisplaySheets } from '../js/sprites.js';
+import { defaultSheets } from '../js/main.js';
 
 const historyManager = new UndoRedoManager();
 
@@ -230,14 +232,12 @@ function loop(time) {
 }
 
 // --- KEY CHANGE: LOADING LOGIC ---
-export function loadAnimation(data, onReady, shouldSave = true) {
-    // When loading a file, we clear all current image sources.
-    // The user must re-load the required spritesheets.
+
+export async function loadAnimation(data, onReady, shouldSave = true) {
     spritesheetSources.clear();
     frameSprites.clear();
     frameDurations.clear();
     
-    // Sprites are just data, no need for Promises.
     if (data.frameSprites) {
         for (const [frameIndex, sprites] of Object.entries(data.frameSprites)) {
             const loadedSprites = sprites.map(spriteData => {
@@ -253,8 +253,45 @@ export function loadAnimation(data, onReady, shouldSave = true) {
         }
     }
     
-    // We pass a dummy image to RfAni because it's no longer used for rendering composed sprites.
     rfAni = new RfAni(new Image(), data.frameWidth, data.frameHeight, data.frames, data.speed, data.name || 'Unnamed', '');
+    
+    const requiredSources = data.sources || [];
+    if (requiredSources.length > 0) {
+        
+        // --- NEW: Smart Loading Logic ---
+        const sourcesToLoadFromURL = [];
+        const sourcesToPromptFor = [];
+        const defaultSheetMap = new Map(defaultSheets.map(def => [def.name, def]));
+
+        for (const sourceName of requiredSources) {
+            if (defaultSheetMap.has(sourceName)) {
+                // This is a default asset, load it automatically from its URL.
+                sourcesToLoadFromURL.push(defaultSheetMap.get(sourceName));
+            } else {
+                // This is a custom asset, ask the user to upload the file.
+                sourcesToPromptFor.push(sourceName);
+            }
+        }
+        
+        // 1. Load the default assets automatically.
+        if (sourcesToLoadFromURL.length > 0) {
+            // The first load clears the palette (the default behavior).
+            await loadAndDisplaySheets(sourcesToLoadFromURL);
+        }
+
+        // 2. Prompt the user for any custom assets.
+        if (sourcesToPromptFor.length > 0) {
+            const main = await import('../js/main.js');
+            const sourceFileMap = await main.promptForMissingFiles(sourcesToPromptFor);
+
+            if (sourceFileMap.size > 0) {
+                const customSheetDefs = Array.from(sourceFileMap.entries()).map(([name, file]) => ({ name, file }));
+                // The second load does NOT clear the palette, it appends to it.
+                await loadAndDisplaySheets(customSheetDefs, false);
+            }
+        }
+    }
+
     if (onReady) onReady();
     if (shouldSave) {
         historyManager.clear();
@@ -544,3 +581,4 @@ export function redo() {
     const nextState = historyManager.redo();
     if (nextState) loadState(nextState);
 }
+

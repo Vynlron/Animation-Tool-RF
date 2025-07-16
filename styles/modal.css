@@ -60,3 +60,43 @@
 .modal-buttons button:hover {
   background: #505050;
 }
+
+.modal-btn {
+    display: block;
+    box-sizing: border-box; /* Ensures padding doesn't affect width */
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #4f4f4f;
+    background-color: #3a3a3a;
+    color: #eee;
+    text-align: center;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-family: inherit; /* Use the modal's font */
+    transition: background-color 0.2s;
+}
+
+.modal-btn:hover {
+    background-color: #4a4a4a;
+    border-color: #666;
+}
+
+/* Specific style for the label that acts as our file upload button */
+.file-upload-label {
+    width: auto; /* Override the 100% width for this smaller button */
+    padding: 6px 12px;
+    font-size: 14px;
+}
+
+/* Style for displaying the chosen filename next to the button */
+.file-name-display {
+    margin-left: 12px;
+    color: #ccc;
+    font-size: 14px;
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px; /* Adjust as needed */
+}

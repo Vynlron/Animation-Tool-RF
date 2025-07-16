@@ -40,13 +40,19 @@ function loadImage(source) {
         img.onload = () => resolve(img);
         img.onerror = reject;
 
-        if (source instanceof File) {
+        // NEW: Check for our custom object with a file property
+        if (source.file && source.file instanceof File) {
+            const reader = new FileReader();
+            reader.onload = (e) => { img.src = e.target.result; };
+            reader.onerror = reject;
+            reader.readAsDataURL(source.file);
+        } else if (source instanceof File) { // Keep old functionality
             const reader = new FileReader();
             reader.onload = (e) => { img.src = e.target.result; };
             reader.onerror = reject;
             reader.readAsDataURL(source);
-        } else if (typeof source.url === 'string') {
-            img.crossOrigin = "anonymous"; // Important for loading from URLs
+        } else if (typeof source.url === 'string') { // Keep old functionality
+            img.crossOrigin = "anonymous";
             img.src = source.url;
         } else {
             reject(new Error("Invalid image source provided."));
@@ -55,20 +61,31 @@ function loadImage(source) {
 }
 
 // --- NEW: A single, powerful function to handle all sheet loading ---
-export async function loadAndDisplaySheets(sheetDefs) {
+export async function loadAndDisplaySheets(sheetDefs, clearPalette = true) {
     const panel = document.getElementById('sprite-selector-panel');
-    clearSpritesheets();
+    // clearSpritesheets();
     panel.innerHTML = '';
 
     if (!sheetDefs || sheetDefs.length === 0) return;
 
+    if (clearPalette) {
+        panel.innerHTML = '';
+    }
+
+    if (!sheetDefs || sheetDefs.length === 0) return;
+
+    
     try {
         const imagePromises = sheetDefs.map(loadImage);
         const images = await Promise.all(imagePromises);
 
         images.forEach((image, index) => {
             const def = sheetDefs[index];
-            const name = def.name; // Use the file name or the name from the object
+            const name = def.name; // This remains the unique ID (the filename)
+            
+            // --- KEY CHANGE HERE ---
+            // Use the displayName for the UI title if it exists, otherwise fall back to the name.
+            const displayName = def.displayName || name;
             
             addSpritesheet(name, image);
 
@@ -76,7 +93,8 @@ export async function loadAndDisplaySheets(sheetDefs) {
             column.className = 'spritesheet-column';
 
             const title = document.createElement('h3');
-            title.textContent = name;
+            title.textContent = displayName; // Use the new displayName
+            // --- END KEY CHANGE ---
             
             const grid = document.createElement('div');
             grid.className = 'sprite-grid';
