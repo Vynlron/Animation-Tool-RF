@@ -8,7 +8,7 @@ import {
 } from '../studio/studio.js';
 import { initTools } from './tools.js';
 import { initTimeline, renderTimeline } from './timeline.js';
-import { initSprites, enableDrop } from './sprites.js';
+import { initMultiSpriteLoader, enableDrop, loadAndDisplaySheets } from './sprites.js';
 import { RfAni } from '../engine/rfani.js';
 import { initIOButtons } from './io.js';
 
@@ -75,7 +75,7 @@ export function showContentModal(title, contentElement) {
     modal.classList.remove('hidden');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => { 
     const studioEl = document.getElementById('studio');
     const menuEl = document.getElementById('main-menu');
     const canvas = document.getElementById('preview');
@@ -117,10 +117,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     initStudio(canvas);
     initTools(canvas);
-    initSprites();
+    initMultiSpriteLoader(); // <-- This is our new generic function call
     enableDrop(canvas);
     initIOButtons(onAnimationImport, showModal, showContentModal);
     initTimeline();
+
 
     const widthInput = document.getElementById('frame-width-input');
     const heightInput = document.getElementById('frame-height-input');
@@ -142,16 +143,24 @@ document.addEventListener('DOMContentLoaded', () => {
     backToMenuBtn.addEventListener('click', showMenu);
     
     document.getElementById('new-animation').addEventListener('click', () => {
-        showModal({
-            title: 'Name Your Animation',
-            onConfirm: (name) => {
-                const newAni = new RfAni(new Image(), 20, 20, [], 200, name, '');
-                setRfAni(newAni);
-                const data = getAnimationData();
-                showStudio(data);
-            }
-        });
+    showModal({
+        title: 'Name Your Animation',
+        onConfirm: async (name) => { // <-- Make this function async
+            const newAni = new RfAni(new Image(), 20, 20, [], 200, name, '');
+            setRfAni(newAni);
+            const data = getAnimationData();
+            showStudio(data);
+
+            // --- KEY CHANGE: Load default assets after showing the studio ---
+            const defaultSheets = [
+                { name: 'Head', url: '../assets/realmforge_head.png' },
+                { name: 'Body', url: '../assets/realmforge_body.png' }
+            ];
+            await loadAndDisplaySheets(defaultSheets);
+            // --- END KEY CHANGE ---
+        }
     });
+});
 
     document.getElementById('rfani-loader').addEventListener('change', (e) => {
         const file = e.target.files[0];

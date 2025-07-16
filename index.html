@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>RfAni Animation Tool</title>
+  <title>RfAni Studio</title>
   <link rel="stylesheet" href="styles/base.css" />
   <link rel="stylesheet" href="styles/header.css" />
   <link rel="stylesheet" href="styles/menu.css" />
@@ -19,94 +19,92 @@
     </div>
     
     <div id="header-actions" class="header-actions" style="display: none;">
-        <button id="export-rfani-btn" title="Save animation to a .rfani file">Export (.rfani)</button>
+        <button id="export-rfani-btn" title="Save animation to a .rfani file">💾 Export</button>
         <label class="header-btn-label" title="Load a .rfani file">
-            Import (.rfani)
+            📂 Import
             <input type="file" id="import-rfani-input" accept=".rfani,application/json" hidden>
         </label>
-        <button id="preview-gif-btn" title="Generate a GIF preview">Preview (GIF)</button>
+        <button id="preview-gif-btn" title="Generate a GIF preview">🎞️ Preview</button>
     </div>
 
     <div id="header-right-controls" class="header-right-controls" style="display: none;">
-        <label>Width <input id="frame-width-input" type="number" value="20" min="1"></label>
-        <label>Height <input id="frame-height-input" type="number" value="20" min="1"></label>
-        <button id="back-to-menu" class="library-btn" type="button">⬅ Back to Menu</button>
+        <label>W <input id="frame-width-input" type="number" value="20" min="1"></label>
+        <label>H <input id="frame-height-input" type="number" value="20" min="1"></label>
+        <button id="back-to-menu" class="library-btn" type="button">⏪ Back</button>
     </div>
   </header>
 
   <main id="main-menu">
-  <div class="menu-container">
-    <h1 class="menu-title">RfAni <span>Animation Tool</span></h1>
-    
-    <section>
-      <h2>New animation</h2>
-      <div class="card-row">
-        <div class="card" id="new-animation">
-          <div class="icon">➕</div>
-          <div class="label">New empty animation</div>
+    <div class="menu-container">
+      <h1 class="menu-title">RfAni <span>Visual Animation Studio</span></h1>
+      
+      <section>
+        <h2>New animation</h2>
+        <div class="card-row">
+          <div class="card" id="new-animation">
+            <div class="icon">✨</div>
+            <div class="label">Create new</div>
+          </div>
+          <label class="card upload-card">
+            <input type="file" id="rfani-loader" accept=".json,.rfani" hidden />
+            <div class="icon">☁️</div>
+            <div class="label">Load .rfani</div>
+          </label>
         </div>
-        <label class="card upload-card">
-          <input type="file" id="rfani-loader" accept=".json,.rfani" hidden />
-          <div class="icon">☁️</div>
-          <div class="label">Load .rfani file</div>
-        </label>
-      </div>
-    </section>
+      </section>
 
-    <section>
-      <h2>Last opened</h2>
-      <div id="recent-list" class="card-row">
-        <div class="card disabled">
-          <div class="icon">🕒</div>
-          <div class="label">No files yet</div>
+      <section>
+        <h2>Recent</h2>
+        <div id="recent-list" class="card-row">
+          <div class="card disabled">
+            <div class="icon">🕒</div>
+            <div class="label">No files yet</div>
+          </div>
         </div>
-      </div>
-    </section>
-  </div>
-</main>
-
+      </section>
+    </div>
+  </main>
 
   <main id="studio" style="display: none;">
     <div class="studio-container">
       <div class="studio-main fullscreen-grid">
         <div class="studio-sidebar transparent-tools">
           <button id="tool-pan" title="Pan Tool">🖐️</button>
-          <button id="tool-add-sprite" title="Add Sprite">➕</button>
-          <button id="tool-toggle-grid" title="Toggle Grid">🔲</button>
-          <input type="file" id="sprite-loader" accept="image/*" style="display: none;">
+          <button id="tool-toggle-grid" title="Toggle Grid">🔳</button>
+          <input type="file" id="sprite-loader" accept="image/*" hidden>
         </div>
         <div class="canvas-wrapper">
           <canvas id="preview"></canvas>
         </div>
-        
         <div class="sprite-panel-wrapper">
-            <button id="add-sprite-right-btn" class="add-sprite-btn">Add New Sprite ➕</button>
-            <div class="sprite-panel transparent-sprite-panel" id="sprite-selector-panel">
-              <h3>Sprites</h3>
-            </div>
+          <label class="load-spritesheet-btn">
+            📁 Load Spritesheet
+            <input type="file" id="spritesheet-loader-input" accept="image/*" multiple hidden>
+          </label>
+          <div id="sprite-selector-panel" class="transparent-sprite-panel"></div>
         </div>
-
       </div>
     </div>
 
     <div id="sprite-options" class="floating-panel" style="display:none;">
-      <span>Sprite Options:</span>
-      <button id="flip-h">Flip Horizontal</button>
-      <button id="flip-v">Flip Vertical</button>
-      <button id="layer-up">Bring Forward</button>
-      <button id="layer-down">Send Backward</button>
-      <button id="delete-selected-sprite">Delete</button>
+      <span>Options:</span>
+      <button id="flip-h">Flip ↔</button>
+      <button id="flip-v">Flip ↕</button>
+      <button id="layer-up">▲ Forward</button>
+      <button id="layer-down">▼ Backward</button>
+      <button id="delete-selected-sprite">❌ Delete</button>
     </div>
+
     <div class="frame-panel">
       <div class="frame-controls-row">
         <label>Duration: <input type="number" id="frame-duration" value="100" /></label>
-        <button id="add-frame">＋</button>
-        <button id="remove-frame">－</button>
+        <button id="add-frame" title="Add Frame">➕</button>
+        <button id="remove-frame" title="Remove Frame">➖</button>
         <button id="play-btn" title="Play">▶️</button>
         <button id="pause-btn" title="Pause">⏸️</button>
-        <label class="loop-toggle-label"><input type="checkbox" id="loop-toggle"> Loop</label>
-        <button id="copy-frame">Copy Frame</button>
-        <button id="paste-frame">Paste Frame</button>
+        <label class="loop-toggle-label"><input type="checkbox" id="loop-toggle"> 🔁 Loop</label>
+        <button id="copy-frame" title="Copy Frame">📋</button>
+        <button id="paste-frame" title="Paste Frame">📥</button>
       </div>
       <div class="frame-grid" id="frame-list"></div>
     </div>
@@ -134,7 +132,7 @@
       </div>
     </div>
   </div>
-  
+
   <script type="text/javascript" src="js/lib/gif.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>

@@ -1,0 +1,19 @@
+{
+  "imageFile": "realmforge_player-Template.png",
+  "parts": {
+    "head": [
+      { "name": "Head 1", "x": 0, "y": 0, "w": 20, "h": 20 },
+      { "name": "Head 2", "x": 20, "y": 0, "w": 20, "h": 20 }
+    ],
+    "body": [
+      { "name": "Body 1", "x": 40, "y": 0, "w": 20, "h": 20 },
+      { "name": "Body 2", "x": 60, "y": 0, "w": 20, "h": 20 }
+    ],
+    "hands": [
+        { "name": "Hands 1", "x": 0, "y": 20, "w": 20, "h": 20 },
+        { "name": "Hands 2", "x": 20, "y": 20, "w": 20, "h": 20 },
+        { "name": "Hands 3", "x": 40, "y": 20, "w": 20, "h": 20 },
+        { "name": "Hands 4", "x": 60, "y": 20, "w": 20, "h": 20 }
+    ]
+  }
+}

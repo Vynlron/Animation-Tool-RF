@@ -1,3 +1,5 @@
+// studio/studio.js
+
 import { RfAni } from '../engine/rfani.js';
 import { isPlaybackEnabled, isLoopingEnabled, pausePlayback } from '../js/tools.js';
 import { UndoRedoManager } from './UndoRedoManager.js';
@@ -11,12 +13,33 @@ let zoomLevel = 2;
 const minZoom = 0.5;
 const maxZoom = 12;
 let canvasRef = null;
-const frameSprites = new Map();
-const frameDurations = new Map();
 export let selectedSprite = null;
 
+// --- KEY CHANGE ---
+// We now store a collection of named spritesheets, not just one.
+// The key is the filename (e.g., 'heads.png'), and the value is the Image object.
+let spritesheetSources = new Map();
+// frameSprites will now store objects including the `sourceName`.
+const frameSprites = new Map();
+// --- END KEY CHANGE ---
+
+const frameDurations = new Map();
 let offsetX = 0;
 let offsetY = 0;
+
+// --- KEY CHANGE: New functions to manage multiple sources ---
+export function addSpritesheet(name, image) {
+    spritesheetSources.set(name, image);
+}
+export function clearSpritesheets() {
+    spritesheetSources.clear();
+    // Also clear the animation frames, as they are now invalid.
+    frameSprites.clear();
+    if(rfAni) {
+      rfAni.frames.forEach((_, i) => frameSprites.set(i, []));
+    }
+}
+// --- END KEY CHANGE ---
 
 export function saveState() {
     const currentState = getAnimationData();
@@ -28,11 +51,14 @@ export function saveState() {
 export async function loadState(stateData) {
     if (!stateData) return;
     const shouldSave = false;
+    // Note: Loading a state won't load the images, it just restores the data.
+    // The user will need to re-load the required spritesheets via the UI.
     loadAnimation(stateData, async () => {
         const main = await import('../js/main.js');
         main.updateUIForLoadedAnimation(stateData);
     }, shouldSave);
 }
+
 
 export function setSelectedSprite(sprite) {
   selectedSprite = sprite;
@@ -49,26 +75,21 @@ export function initStudio(canvasElement) {
   canvasElement.height = window.innerHeight;
   ctx = canvasElement.getContext('2d');
   ctx.imageSmoothingEnabled = false;
-  ctx.webkitImageSmoothingEnabled = false;
-  ctx.mozImageSmoothingEnabled = false;
-  ctx.msImageSmoothingEnabled = false;
   lastTime = performance.now();
-
   window.addEventListener('resize', () => {
     canvasRef.width = window.innerWidth;
     canvasRef.height = window.innerHeight;
   });
-
   canvasElement.addEventListener('wheel', (e) => {
     e.preventDefault();
     const delta = Math.sign(e.deltaY);
     zoomLevel = Math.max(minZoom, Math.min(maxZoom, zoomLevel + (delta < 0 ? 0.1 : -0.1)));
     zoomLevel = Math.round(zoomLevel * 10) / 10;
   });
-
   requestAnimationFrame(loop);
 }
 
+// ... (drawGrid and drawCrosshair functions remain the same) ...
 function drawGrid(ctx, width, height, zoom) {
   const baseSize = 10;
   const gridSize = baseSize;
@@ -122,16 +143,14 @@ function drawCrosshair(ctx, width, height, zoom) {
   ctx.restore();
 }
 
+
 function loop(time) {
   const dt = time - lastTime;
   lastTime = time;
-
   ctx.clearRect(0, 0, canvasRef.width, canvasRef.height);
   ctx.imageSmoothingEnabled = false;
-
   const centerX = canvasRef.width / 2;
   const centerY = canvasRef.height / 2;
-
   ctx.save();
   ctx.translate(centerX, centerY);
   ctx.scale(zoomLevel, zoomLevel);
@@ -147,9 +166,7 @@ function loop(time) {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
       ctx.lineWidth = 1 / zoomLevel;
       ctx.setLineDash([4 / zoomLevel, 2 / zoomLevel]);
-      const boxWidth = rfAni.frameWidth;
-      const boxHeight = rfAni.frameHeight;
-      ctx.strokeRect(-boxWidth / 2, -boxHeight / 2, boxWidth, boxHeight);
+      ctx.strokeRect(-rfAni.frameWidth / 2, -rfAni.frameHeight / 2, rfAni.frameWidth, rfAni.frameHeight);
       ctx.restore();
   }
 
@@ -171,56 +188,62 @@ function loop(time) {
             }
         }
     }
-    rfAni.draw(ctx, 0, 0, 1);
+    
+    // --- KEY CHANGE: DRAWING LOGIC ---
+    // We now draw all sprites by looking up their source image from the Map.
     const currentFrameSprites = frameSprites.get(rfAni.index) || [];
     for (const s of currentFrameSprites) {
-      if (s.img.complete && s.img.naturalWidth > 0) {
-        ctx.save();
-        const drawX = s.x + s.img.width / 2;
-        const drawY = s.y + s.img.height / 2;
-        ctx.translate(drawX, drawY);
-        ctx.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
-        ctx.drawImage(s.img, -s.img.width / 2, -s.img.height / 2);
-        ctx.restore();
-      }
+        const sourceImage = spritesheetSources.get(s.sourceName);
+        if (sourceImage) { // Only draw if the source image is loaded
+            ctx.save();
+            const { sWidth, sHeight } = s.sourceRect;
+            const drawX = s.x + sWidth / 2;
+            const drawY = s.y + sHeight / 2;
+            ctx.translate(drawX, drawY);
+            ctx.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
+            ctx.drawImage(sourceImage, s.sourceRect.sx, s.sourceRect.sy, sWidth, sHeight, -sWidth / 2, -sHeight / 2, sWidth, sHeight);
+            ctx.restore();
+        }
     }
+    // Update selection highlight logic
     if (selectedSprite && currentFrameSprites.includes(selectedSprite)) {
-        ctx.save();
-        ctx.strokeStyle = '#00aaff';
-        ctx.lineWidth = 2 / zoomLevel;
-        const s = selectedSprite;
-        const centerX = s.x + s.img.width / 2;
-        const centerY = s.y + s.img.height / 2;
-        ctx.translate(centerX, centerY);
-        ctx.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
-        ctx.strokeRect(-s.img.width / 2, -s.img.height / 2, s.img.width, s.img.height);
-        ctx.restore();
+        const sourceImage = spritesheetSources.get(selectedSprite.sourceName);
+        if(sourceImage) {
+            ctx.save();
+            ctx.strokeStyle = '#00aaff';
+            ctx.lineWidth = 2 / zoomLevel;
+            const s = selectedSprite;
+            const { sWidth, sHeight } = s.sourceRect;
+            const centerX = s.x + sWidth / 2;
+            const centerY = s.y + sHeight / 2;
+            ctx.translate(centerX, centerY);
+            ctx.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
+            ctx.strokeRect(-sWidth / 2, -sHeight / 2, sWidth, sHeight);
+            ctx.restore();
+        }
     }
+    // --- END KEY CHANGE ---
   }
 
   ctx.restore();
   requestAnimationFrame(loop);
 }
 
+// --- KEY CHANGE: LOADING LOGIC ---
 export function loadAnimation(data, onReady, shouldSave = true) {
+    // When loading a file, we clear all current image sources.
+    // The user must re-load the required spritesheets.
+    spritesheetSources.clear();
     frameSprites.clear();
     frameDurations.clear();
-    const spritePromises = [];
-
+    
+    // Sprites are just data, no need for Promises.
     if (data.frameSprites) {
         for (const [frameIndex, sprites] of Object.entries(data.frameSprites)) {
-            const framePromises = sprites.map(spriteData => {
-                return new Promise((resolve) => {
-                    const img = new Image();
-                    img.src = spriteData.src;
-                    img.onload = () => resolve({ ...spriteData, img, flipH: spriteData.flipH || false, flipV: spriteData.flipV || false });
-                    img.onerror = () => resolve(null);
-                });
+            const loadedSprites = sprites.map(spriteData => {
+                return { ...spriteData, flipH: spriteData.flipH || false, flipV: spriteData.flipV || false };
             });
-            const p = Promise.all(framePromises).then(loadedSprites => {
-                frameSprites.set(parseInt(frameIndex), loadedSprites.filter(s => s));
-            });
-            spritePromises.push(p);
+            frameSprites.set(parseInt(frameIndex), loadedSprites.filter(s => s));
         }
     }
 
@@ -230,37 +253,27 @@ export function loadAnimation(data, onReady, shouldSave = true) {
         }
     }
     
-    Promise.all(spritePromises).then(() => {
-        const image = new Image();
-        if (data.image) {
-            image.src = 'assets/' + data.image;
-        }
-        image.onload = () => {
-            rfAni = new RfAni(image, data.frameWidth, data.frameHeight, data.frames, data.speed, data.name || 'Unnamed', data.image);
-            if (onReady) onReady();
-            if (shouldSave) {
-                historyManager.clear();
-                saveState();
-            }
-        };
-        if (!data.image) {
-            image.onload();
-        }
-    });
+    // We pass a dummy image to RfAni because it's no longer used for rendering composed sprites.
+    rfAni = new RfAni(new Image(), data.frameWidth, data.frameHeight, data.frames, data.speed, data.name || 'Unnamed', '');
+    if (onReady) onReady();
+    if (shouldSave) {
+        historyManager.clear();
+        saveState();
+    }
 }
+// --- END KEY CHANGE ---
 
 export function getFrames() {
   return rfAni ? rfAni.frames : [];
 }
 
-
 export function setFrameIndex(index) {
   if (rfAni) {
-    const max = rfAni.frames.length - 1;
-    rfAni.index = Math.max(0, Math.min(index, max));
+    rfAni.index = Math.max(0, Math.min(rfAni.frames.length - 1, index));
   }
 }
 
+// ... (removeFrame and moveFrame remain mostly the same, no core logic change) ...
 export function removeFrame(index) {
   if (!rfAni) return;
   const frames = rfAni.frames.slice();
@@ -309,83 +322,55 @@ export function moveFrame(oldIndex, newIndex) {
   saveState();
 }
 
+
+// --- KEY CHANGE: FRAME PREVIEW ---
 export function createFramePreview(index, scale = 2) {
     if (!rfAni) return null;
-    const frame = rfAni.frames[index];
-    if (!frame) return null;
-
     const canvas = document.createElement('canvas');
     canvas.width = rfAni.frameWidth * scale;
     canvas.height = rfAni.frameHeight * scale;
     const c = canvas.getContext('2d');
     c.imageSmoothingEnabled = false;
-
-    if (rfAni.image && rfAni.image.complete && frame[0] >= 0 && frame[1] >= 0) {
-        const sx = frame[0] * rfAni.frameWidth;
-        const sy = frame[1] * rfAni.frameHeight;
-        c.drawImage(rfAni.image, sx, sy, rfAni.frameWidth, rfAni.frameHeight, 0, 0, canvas.width, canvas.height);
-    } else {
-        c.fillStyle = '#111';
-        c.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    c.fillStyle = '#111';
+    c.fillRect(0, 0, canvas.width, canvas.height);
 
     const sprites = frameSprites.get(index) || [];
-
     c.save();
     c.translate(canvas.width / 2, canvas.height / 2);
 
     for (const s of sprites) {
-        if (s.img.complete && s.img.naturalWidth > 0) {
+        const sourceImage = spritesheetSources.get(s.sourceName);
+        if (sourceImage) {
             c.save();
-            const centerX = s.x + s.img.width / 2;
-            const centerY = s.y + s.img.height / 2;
+            const { sWidth, sHeight } = s.sourceRect;
+            const centerX = s.x + sWidth / 2;
+            const centerY = s.y + sHeight / 2;
             c.translate(centerX * scale, centerY * scale);
             c.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
-            c.drawImage(
-                s.img,
-                (-s.img.width / 2) * scale,
-                (-s.img.height / 2) * scale,
-                s.img.width * scale,
-                s.img.height * scale
-            );
+            c.drawImage(sourceImage, s.sourceRect.sx, s.sourceRect.sy, sWidth, sHeight, (-sWidth / 2) * scale, (-sHeight / 2) * scale, sWidth * scale, sHeight * scale);
             c.restore();
         }
     }
     c.restore();
     return canvas;
 }
+// --- END KEY CHANGE ---
 
-export function addFrame(frame = null, initialSprites = null) {
+export function addFrame(frameData = null, initialSprites = null) {
   if (!rfAni) return;
   const frames = rfAni.frames.slice();
-  if (!frame || !Array.isArray(frame) || frame.length !== 2) {
-    frames.push([-1, -1]);
-  } else {
-    frames.push(frame);
-  }
+  frames.push([-1, -1]); // Add a "blank" base frame
   rfAni.setFrames(frames);
   const newFrameIndex = frames.length - 1;
-
   if (initialSprites && initialSprites.length > 0) {
-    const spritePromises = initialSprites.map(spriteData => {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.src = spriteData.src;
-        img.onload = () => resolve({ img, x: spriteData.x, y: spriteData.y, flipH: spriteData.flipH || false, flipV: spriteData.flipV || false });
-        img.onerror = () => resolve(null);
-      });
-    });
-    Promise.all(spritePromises).then(loadedSprites => {
-      frameSprites.set(newFrameIndex, loadedSprites.filter(s => s !== null));
-      saveState();
-    });
+    frameSprites.set(newFrameIndex, initialSprites);
   } else {
     if (!frameSprites.has(newFrameIndex)) {
       frameSprites.set(newFrameIndex, []);
     }
-    saveState();
   }
   frameDurations.set(newFrameIndex, 100);
+  saveState();
 }
 
 export function setSpeed(speed) {
@@ -393,12 +378,14 @@ export function setSpeed(speed) {
   saveState();
 }
 
+// --- KEY CHANGE: SAVING DATA ---
 export function getAnimationData() {
   if (!rfAni) return null;
   const frameSpritesData = {};
   for (const [frameIndex, sprites] of frameSprites.entries()) {
     frameSpritesData[frameIndex] = sprites.map(sprite => ({
-      src: sprite.img.src,
+      sourceName: sprite.sourceName, // Save the name of the source image
+      sourceRect: sprite.sourceRect,
       x: sprite.x,
       y: sprite.y,
       flipH: sprite.flipH,
@@ -407,7 +394,8 @@ export function getAnimationData() {
   }
   return {
     name: rfAni.name,
-    image: rfAni.imageName,
+    // We no longer save a single image name, but a list of sources.
+    sources: Array.from(spritesheetSources.keys()),
     frameWidth: rfAni.frameWidth,
     frameHeight: rfAni.frameHeight,
     frames: rfAni.frames.slice(),
@@ -416,17 +404,20 @@ export function getAnimationData() {
     frameDurations: Object.fromEntries(frameDurations)
   };
 }
+// --- END KEY CHANGE ---
 
-export function addCanvasSprite(img, x = 0, y = 0) {
+// --- KEY CHANGE: ADDING A SPRITE ---
+// It now accepts a sourceName to identify the spritesheet.
+export function addCanvasSprite(sourceName, sourceRect, x = 0, y = 0) {
   if (!rfAni) return;
-  if (!img.complete || img.naturalWidth === 0) return;
   const currentFrame = rfAni.index;
   if (!frameSprites.has(currentFrame)) {
     frameSprites.set(currentFrame, []);
   }
-  frameSprites.get(currentFrame).push({ img, x, y, flipH: false, flipV: false });
+  frameSprites.get(currentFrame).push({ sourceName, sourceRect, x, y, flipH: false, flipV: false });
   saveState();
 }
+// --- END KEY CHANGE ---
 
 export function screenToWorld(x, y) {
   const cx = canvasRef.width / 2;
@@ -440,46 +431,41 @@ export function screenToWorld(x, y) {
 const hitCanvas = document.createElement('canvas');
 const hitCtx = hitCanvas.getContext('2d');
 
+// --- KEY CHANGE: PIXEL-PERFECT SELECTION ---
 export function getSpriteAtPoint(x, y) {
     if (!rfAni) return null;
     const currentFrameSprites = frameSprites.get(rfAni.index) || [];
-
     for (let i = currentFrameSprites.length - 1; i >= 0; i--) {
         const s = currentFrameSprites[i];
-        
-        // Broad phase check
-        if (x >= s.x && x <= s.x + s.img.width && y >= s.y && y <= s.y + s.img.height) {
-            
-            // Narrow phase check (pixel perfect)
-            hitCanvas.width = s.img.width;
-            hitCanvas.height = s.img.height;
-            
+        const sourceImage = spritesheetSources.get(s.sourceName);
+        if (!sourceImage) continue; // Can't select a sprite whose source isn't loaded
+
+        const { sWidth, sHeight } = s.sourceRect;
+        if (x >= s.x && x <= s.x + sWidth && y >= s.y && y <= s.y + sHeight) {
+            hitCanvas.width = sWidth;
+            hitCanvas.height = sHeight;
             hitCtx.clearRect(0, 0, hitCanvas.width, hitCanvas.height);
             hitCtx.save();
             if(s.flipH || s.flipV) {
-                hitCtx.translate(s.img.width / 2, s.img.height / 2);
+                hitCtx.translate(sWidth / 2, sHeight / 2);
                 hitCtx.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
-                hitCtx.drawImage(s.img, -s.img.width / 2, -s.img.height / 2);
+                hitCtx.drawImage(sourceImage, s.sourceRect.sx, s.sourceRect.sy, sWidth, sHeight, -sWidth / 2, -sHeight / 2, sWidth, sHeight);
             } else {
-                hitCtx.drawImage(s.img, 0, 0);
+                hitCtx.drawImage(sourceImage, s.sourceRect.sx, s.sourceRect.sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
             }
             hitCtx.restore();
-
-            // Calculate the position of the click relative to the sprite's image data
-            let localX = Math.floor(x - s.x);
-            let localY = Math.floor(y - s.y);
-
-            // Get the pixel data from the temporary canvas
+            const localX = Math.floor(x - s.x);
+            const localY = Math.floor(y - s.y);
             const pixelData = hitCtx.getImageData(localX, localY, 1, 1).data;
-
-            // Check the alpha channel (the 4th value)
             if (pixelData[3] > 0) {
-                return s; // Clicked on a non-transparent pixel
+                return s;
             }
         }
     }
     return null;
 }
+// --- END KEY CHANGE ---
+
 
 export function removeSpriteFromCurrentFrame(sprite) {
   if (!rfAni) return;
@@ -492,16 +478,13 @@ export function removeSpriteFromCurrentFrame(sprite) {
   }
 }
 
-export function copySpritesToFrame(fromFrame, toFrame) {
-  if (!rfAni) return;
-  const sourceSprites = frameSprites.get(fromFrame) || [];
-  const copiedSprites = sourceSprites.map(sprite => ({ ...sprite }));
-  frameSprites.set(toFrame, copiedSprites);
-  saveState();
-}
-
 export function getFrameSprites(frameIndex) {
-  return frameSprites.get(frameIndex) || [];
+    const sprites = frameSprites.get(frameIndex) || [];
+    // Deep copy sprites to prevent mutation issues with copy/paste
+    return sprites.map(s => ({
+        ...s,
+        sourceRect: { ...s.sourceRect }
+    }));
 }
 
 export function setRfAni(instance) {
@@ -514,6 +497,7 @@ export function setRfAni(instance) {
   }
 }
 
+// ... (Other functions like setFrameDuration, setFrameWidth, etc., remain the same) ...
 export function setFrameDuration(index, duration) {
   frameDurations.set(index, duration);
   saveState();

@@ -1,137 +1,127 @@
-import { addCanvasSprite, screenToWorld } from '../studio/studio.js';
+import { 
+    screenToWorld, 
+    addCanvasSprite,
+    addSpritesheet,
+    clearSpritesheets
+} from '../studio/studio.js';
 
 let isDraggingFromPalette = false;
-let lastClickTime = 0;
-const CLICK_DEBOUNCE = 200; // ms
 
-// Helper function to create a sprite item for the palette
-function createPaletteSprite(src) {
+function createPaletteSprite(sourceName, sourceImage, sx, sy, sWidth, sHeight) {
   const itemWrapper = document.createElement('div');
   itemWrapper.className = 'palette-sprite-item';
 
-  const el = document.createElement('img');
-  el.src = src;
-  el.draggable = true;
-  el.style.imageRendering = 'pixelated';
+  const previewCanvas = document.createElement('canvas');
+  previewCanvas.width = sWidth;
+  previewCanvas.height = sHeight;
+  const ctx = previewCanvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(sourceImage, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
 
-  const deleteBtn = document.createElement('button');
-  deleteBtn.className = 'palette-sprite-delete-btn';
-  deleteBtn.textContent = 'X';
-  deleteBtn.title = 'Delete from palette';
+  previewCanvas.draggable = true;
+  previewCanvas.style.imageRendering = 'pixelated';
 
-  deleteBtn.addEventListener('click', (e) => {
-    e.stopPropagation(); // Prevent the click from triggering other listeners
-    itemWrapper.remove(); // Remove the sprite from the panel
-  });
-  
-  el.addEventListener('dragstart', ev => {
+  const dragData = { sourceName, sourceRect: { sx, sy, sWidth, sHeight } };
+
+  previewCanvas.addEventListener('dragstart', ev => {
     isDraggingFromPalette = true;
-    ev.dataTransfer.setData('text/plain', JSON.stringify({ src }));
+    ev.dataTransfer.setData('text/plain', JSON.stringify(dragData));
   });
 
-  el.addEventListener('dragend', () => {
-    setTimeout(() => { isDraggingFromPalette = false; }, 10);
-  });
-
-  el.addEventListener('click', () => {
-    if (isDraggingFromPalette) return;
-    const now = Date.now();
-    if (now - lastClickTime < CLICK_DEBOUNCE) return;
-    lastClickTime = now;
-    insertSprite(src, 0, 0);
-  });
-  
-  itemWrapper.appendChild(el);
-  itemWrapper.appendChild(deleteBtn);
-  
+  itemWrapper.appendChild(previewCanvas);
   return itemWrapper;
 }
 
-export function addSpriteToPanel(src) {
-  const panel = document.getElementById('sprite-selector-panel');
-  if (!panel) return;
+// --- NEW: Reusable Image Loading Logic ---
+// This can load an image from a File object or a URL.
+function loadImage(source) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
 
-  let customCategory = panel.querySelector('.sprite-category[data-category="CUSTOM"]');
-  if (!customCategory) {
-    customCategory = document.createElement('div');
-    customCategory.className = 'sprite-category';
-    customCategory.dataset.category = 'CUSTOM';
-    
-    const title = document.createElement('h4');
-    title.textContent = 'CUSTOM';
-    
-    const grid = document.createElement('div');
-    grid.className = 'sprite-grid';
-
-    customCategory.appendChild(title);
-    customCategory.appendChild(grid);
-    panel.appendChild(customCategory);
-  }
-
-  const grid = customCategory.querySelector('.sprite-grid');
-  const spriteItem = createPaletteSprite(src);
-  grid.appendChild(spriteItem);
+        if (source instanceof File) {
+            const reader = new FileReader();
+            reader.onload = (e) => { img.src = e.target.result; };
+            reader.onerror = reject;
+            reader.readAsDataURL(source);
+        } else if (typeof source.url === 'string') {
+            img.crossOrigin = "anonymous"; // Important for loading from URLs
+            img.src = source.url;
+        } else {
+            reject(new Error("Invalid image source provided."));
+        }
+    });
 }
 
-export async function initSprites() {
-  const img = new Image();
-  img.src = 'assets/realmforge_player-Template.png';
-  await img.decode();
+// --- NEW: A single, powerful function to handle all sheet loading ---
+export async function loadAndDisplaySheets(sheetDefs) {
+    const panel = document.getElementById('sprite-selector-panel');
+    clearSpritesheets();
+    panel.innerHTML = '';
 
-  const tileSize = 20;
-  const cols = img.width / tileSize;
-  const totalTiles = cols * (img.height / tileSize);
+    if (!sheetDefs || sheetDefs.length === 0) return;
 
-  const panel = document.getElementById('sprite-selector-panel');
-  panel.innerHTML = '';
+    try {
+        const imagePromises = sheetDefs.map(loadImage);
+        const images = await Promise.all(imagePromises);
 
-  const categories = {
-    HEAD: [0, cols],
-    BODY: [cols, cols * 2]
-  };
+        images.forEach((image, index) => {
+            const def = sheetDefs[index];
+            const name = def.name; // Use the file name or the name from the object
+            
+            addSpritesheet(name, image);
 
-  const groups = {};
-  for (const [name] of Object.entries(categories)) {
-    const wrap = document.createElement('div');
-    wrap.className = 'sprite-category';
-    const title = document.createElement('h4');
-    title.textContent = name;
-    const grid = document.createElement('div');
-    grid.className = 'sprite-grid';
-    wrap.appendChild(title);
-    wrap.appendChild(grid);
-    panel.appendChild(wrap);
-    groups[name] = grid;
-  }
+            const column = document.createElement('div');
+            column.className = 'spritesheet-column';
 
-  for (let i = 0; i < totalTiles; i++) {
-    const frame = [i % cols, Math.floor(i / cols)];
-    const sx = frame[0] * tileSize;
-    const sy = frame[1] * tileSize;
+            const title = document.createElement('h3');
+            title.textContent = name;
+            
+            const grid = document.createElement('div');
+            grid.className = 'sprite-grid';
 
-    const c = document.createElement('canvas');
-    c.width = tileSize;
-    c.height = tileSize;
-    const ctx = c.getContext('2d');
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(img, sx, sy, tileSize, tileSize, 0, 0, tileSize, tileSize);
-    const url = c.toDataURL();
+            column.appendChild(title);
+            column.appendChild(grid);
+            panel.appendChild(column);
 
-    const cat = i < categories.HEAD[1] ? 'HEAD' : 'BODY';
-    const spriteItem = createPaletteSprite(url);
-    groups[cat].appendChild(spriteItem);
-  }
+            const tileSize = 20;
+            const cols = Math.floor(image.width / tileSize);
+            const rows = Math.floor(image.height / tileSize);
+            
+            for (let i = 0; i < rows * cols; i++) {
+                const frameX = i % cols;
+                const frameY = Math.floor(i / cols);
+                const sx = frameX * tileSize;
+                const sy = frameY * tileSize;
+
+                const spriteItem = createPaletteSprite(name, image, sx, sy, tileSize, tileSize);
+                grid.appendChild(spriteItem);
+            }
+        });
+
+    } catch (error) {
+        console.error("Failed to load and process spritesheets:", error);
+        alert("There was an error loading the images.");
+    }
 }
 
-function insertSprite(src, x, y) {
-  const img = new Image();
-  img.onload = () => {
-    addCanvasSprite(img, x, y);
-  };
-  img.onerror = () => {
-    console.error('Failed to load sprite image:', src);
-  };
-  img.src = src;
+
+// This function now uses our new central loader.
+export function initMultiSpriteLoader() {
+    const loaderInput = document.getElementById('spritesheet-loader-input');
+
+    loaderInput.addEventListener('change', async (event) => {
+        const files = event.target.files;
+        if (files && files.length > 0) {
+            await loadAndDisplaySheets(Array.from(files));
+        }
+        event.target.value = ''; 
+    });
+}
+
+function insertSprite(sourceName, sourceRect, x, y) {
+  addCanvasSprite(sourceName, sourceRect, x, y);
 }
 
 export function enableDrop(canvas) {
@@ -139,9 +129,11 @@ export function enableDrop(canvas) {
   canvas.addEventListener('drop', e => {
     e.preventDefault();
     if (!isDraggingFromPalette) return;
+    
     const data = JSON.parse(e.dataTransfer.getData('text/plain'));
     const pos = screenToWorld(e.offsetX, e.offsetY);
-    insertSprite(data.src, pos.x, pos.y);
+    insertSprite(data.sourceName, data.sourceRect, pos.x, pos.y);
+
     isDraggingFromPalette = false;
   });
 }

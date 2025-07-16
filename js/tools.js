@@ -11,7 +11,7 @@ import {
     redo,
     saveState
 } from '../studio/studio.js';
-import { addSpriteToPanel } from './sprites.js';
+// Obsolete import removed: import { addSpriteToPanel } from './sprites.js';
 
 let isGridVisible = true;
 let isPlaying = false;
@@ -63,31 +63,11 @@ export function initTools(canvas) {
     isLooping = loopToggle.checked;
   });
 
-  document.getElementById('tool-add-sprite').addEventListener('click', () => {
-    setActiveTool('tool-add-sprite');
-    document.getElementById('sprite-loader').click();
-  });
-  
-  document.getElementById('add-sprite-right-btn').addEventListener('click', () => {
-    document.getElementById('sprite-loader').click();
-  });
-
-  document.getElementById('sprite-loader').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      const newSpriteSrc = reader.result;
-      img.src = newSpriteSrc;
-      img.onload = () => {
-        addCanvasSprite(img, 0, 0);
-        addSpriteToPanel(newSpriteSrc);
-      };
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  });
+  // --- OBSOLETE CODE REMOVED ---
+  // The event listeners for 'tool-add-sprite', 'add-sprite-right-btn',
+  // and 'sprite-loader' have been removed as they are no longer needed.
+  // The new "Load Spritesheet" input handles this functionality now.
+  // --- END REMOVAL ---
 
   document.getElementById('tool-pan').addEventListener('click', () => {
     setActiveTool('tool-pan');
@@ -190,11 +170,12 @@ export function initTools(canvas) {
 
     if (selectedSprite) {
       let moved = false;
+      const increment = e.shiftKey ? 10 : 1;
       switch (e.key) {
-        case 'ArrowUp':   selectedSprite.y -= 1; moved = true; break;
-        case 'ArrowDown': selectedSprite.y += 1; moved = true; break;
-        case 'ArrowLeft': selectedSprite.x -= 1; moved = true; break;
-        case 'ArrowRight':selectedSprite.x += 1; moved = true; break;
+        case 'ArrowUp':   selectedSprite.y -= increment; moved = true; break;
+        case 'ArrowDown': selectedSprite.y += increment; moved = true; break;
+        case 'ArrowLeft': selectedSprite.x -= increment; moved = true; break;
+        case 'ArrowRight':selectedSprite.x += increment; moved = true; break;
       }
       if (moved) {
         e.preventDefault();
