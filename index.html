@@ -35,35 +35,39 @@
   </header>
 
   <main id="main-menu">
-    <div class="menu-container">
-      <h1 class="menu-title">RfAni <span>Visual Animation Studio</span></h1>
-      
-      <section>
-        <h2>New animation</h2>
-        <div class="card-row">
-          <div class="card" id="new-animation">
-            <div class="icon">✨</div>
-            <div class="label">Create new</div>
-          </div>
-          <label class="card upload-card">
-            <input type="file" id="rfani-loader" accept=".json,.rfani" hidden />
-            <div class="icon">☁️</div>
-            <div class="label">Load .rfani</div>
-          </label>
-        </div>
-      </section>
+  <div class="menu-hero">
+    <h1 class="menu-title">RfAni</h1>
+    <h2 class="menu-subtitle">RealmForge Animation Studio</h2>
+  </div>
 
-      <section>
-        <h2>Recent</h2>
-        <div id="recent-list" class="card-row">
-          <div class="card disabled">
-            <div class="icon">🕒</div>
-            <div class="label">No files yet</div>
-          </div>
+  <div class="menu-container">
+    <section>
+      <h2>New animation</h2>
+      <div class="card-row">
+        <div class="card" id="new-animation">
+          <div class="icon">✨</div>
+          <div class="label">Create new</div>
         </div>
-      </section>
-    </div>
-  </main>
+        <label class="card upload-card">
+          <input type="file" id="rfani-loader" accept=".json,.rfani" hidden />
+          <div class="icon">☁️</div>
+          <div class="label">Load .rfani</div>
+        </label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Recent</h2>
+      <div id="recent-list" class="card-row">
+        <div class="card disabled">
+          <div class="icon">🕒</div>
+          <div class="label">No files yet</div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
 
   <main id="studio" style="display: none;">
     <div class="studio-container">

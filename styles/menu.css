@@ -65,3 +65,25 @@ main#main-menu {
   color: #ccc;
   text-align: center;
 }
+.menu-hero {
+  padding-top: 60px;
+  padding-left: 60px;
+}
+
+.menu-title {
+  font-size: 56px;
+  font-weight: 900;
+  color: #00e0ff;
+  margin-bottom: 10px;
+  letter-spacing: 0.05em;
+  background: linear-gradient(90deg, #00e0ff, #00bfff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.menu-subtitle {
+  font-size: 20px;
+  font-weight: 400;
+  color: #ccc;
+  margin-bottom: 40px;
+}
