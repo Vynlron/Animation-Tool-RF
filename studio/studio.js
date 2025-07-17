@@ -15,35 +15,94 @@ let zoomLevel = 2;
 const minZoom = 0.5;
 const maxZoom = 12;
 let canvasRef = null;
-export let selectedSprite = null;
 
-// --- KEY CHANGE ---
-// We now store a collection of named spritesheets, not just one.
-// The key is the filename (e.g., 'heads.png'), and the value is the Image object.
+// --- Handle multiple selected sprites and marquee ---
+export let selectedSprites = [];
+export let marqueeRect = null;
+
 let spritesheetSources = new Map();
-// frameSprites will now store objects including the `sourceName`.
 const frameSprites = new Map();
-// --- END KEY CHANGE ---
-
 const frameDurations = new Map();
 let offsetX = 0;
 let offsetY = 0;
 
-// --- KEY CHANGE: New functions to manage multiple sources ---
 export function addSpritesheet(name, image) {
     spritesheetSources.set(name, image);
 }
-// In studio/studio.js
 
 export function clearSpritesheets() {    
     spritesheetSources.clear();
-    // Also clear the animation frames, as they are now invalid.
     frameSprites.clear();
     if(rfAni) {
       rfAni.frames.forEach((_, i) => frameSprites.set(i, []));
     }
 }
-// --- END KEY CHANGE ---
+
+export function getEditorState() {
+  if (!rfAni) return null;
+  const frameSpritesData = {};
+  for (const [frameIndex, sprites] of frameSprites.entries()) {
+    frameSpritesData[frameIndex] = sprites.map(sprite => ({ ...sprite }));
+  }
+  return {
+    name: rfAni.name,
+    sources: Array.from(spritesheetSources.keys()),
+    frameWidth: rfAni.frameWidth,
+    frameHeight: rfAni.frameHeight,
+    frames: rfAni.frames.slice(),
+    speed: rfAni.speed,
+    frameSprites: frameSpritesData,
+    frameDurations: Object.fromEntries(frameDurations)
+  };
+}
+
+export function getExportData() {
+  if (!rfAni) return null;
+  const frameSpritesData = {};
+  for (const [frameIndex, sprites] of frameSprites.entries()) {
+    if (sprites.length === 0) {
+      frameSpritesData[frameIndex] = [];
+      continue;
+    }
+    
+    // Calculate bounding box of all sprites in the frame
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    
+    sprites.forEach(s => {
+      minX = Math.min(minX, s.x);
+      maxX = Math.max(maxX, s.x + s.sourceRect.sWidth);
+      minY = Math.min(minY, s.y);
+      maxY = Math.max(maxY, s.y + s.sourceRect.sHeight);
+    });
+    
+    // Calculate center point of the bounding box
+    const collectiveWidth = maxX - minX;
+    const collectiveHeight = maxY - minY;
+    const collectiveCenterX = minX + collectiveWidth / 2;
+    const collectiveCenterY = minY + collectiveHeight / 2;
+    
+    // Transform sprites to be centered around origin (0,0)
+    frameSpritesData[frameIndex] = sprites.map(sprite => ({
+      sourceName: sprite.sourceName,
+      sourceRect: sprite.sourceRect,
+      x: sprite.x - collectiveCenterX,
+      y: sprite.y - collectiveCenterY,
+      flipH: sprite.flipH,
+      flipV: sprite.flipV
+    }));
+  }
+  return {
+    name: rfAni.name,
+    sources: Array.from(spritesheetSources.keys()),
+    frameWidth: rfAni.frameWidth,
+    frameHeight: rfAni.frameHeight,
+    frames: rfAni.frames.slice(),
+    speed: rfAni.speed,
+    frameSprites: frameSpritesData,
+    frameDurations: Object.fromEntries(frameDurations)
+  };
+}
 
 export function saveState() {
     const currentState = getAnimationData();
@@ -55,17 +114,32 @@ export function saveState() {
 export async function loadState(stateData) {
     if (!stateData) return;
     const shouldSave = false;
-    // Note: Loading a state won't load the images, it just restores the data.
-    // The user will need to re-load the required spritesheets via the UI.
     loadAnimation(stateData, async () => {
         const main = await import('../js/main.js');
         main.updateUIForLoadedAnimation(stateData);
     }, shouldSave);
 }
 
+export function clearSelection() {
+    selectedSprites = [];
+}
 
-export function setSelectedSprite(sprite) {
-  selectedSprite = sprite;
+export function addToSelection(sprite) {
+    if (!selectedSprites.includes(sprite)) {
+        selectedSprites.push(sprite);
+    }
+}
+
+export function setSelection(sprites) {
+    selectedSprites = sprites;
+}
+
+export function setMarqueeRect(rect) {
+    marqueeRect = rect;
+}
+
+export function clearMarqueeRect() {
+    marqueeRect = null;
 }
 
 export function pan(dx, dy) {
@@ -93,7 +167,6 @@ export function initStudio(canvasElement) {
   requestAnimationFrame(loop);
 }
 
-// ... (drawGrid and drawCrosshair functions remain the same) ...
 function drawGrid(ctx, width, height, zoom) {
   const baseSize = 10;
   const gridSize = baseSize;
@@ -102,7 +175,6 @@ function drawGrid(ctx, width, height, zoom) {
   const worldRight = width / 2 / zoom - offsetX;
   const worldTop = -height / 2 / zoom - offsetY;
   const worldBottom = height / 2 / zoom - offsetY;
-
   const startX = Math.floor(worldLeft / gridSize) * gridSize;
   const endX = Math.ceil(worldRight / gridSize) * gridSize;
   const startY = Math.floor(worldTop / gridSize) * gridSize;
@@ -118,7 +190,6 @@ function drawGrid(ctx, width, height, zoom) {
     ctx.strokeStyle = (index % majorLineEvery === 0) ? '#444' : '#2a2a2a';
     ctx.stroke();
   }
-
   index = 0;
   for (let y = startY; y <= endY; y += gridSize, index++) {
     ctx.beginPath();
@@ -138,7 +209,6 @@ function drawCrosshair(ctx, width, height, zoom) {
   ctx.moveTo(-10000, 0);
   ctx.lineTo(10000, 0);
   ctx.stroke();
-
   ctx.strokeStyle = '#0033cc';
   ctx.beginPath();
   ctx.moveTo(0, -10000);
@@ -146,7 +216,6 @@ function drawCrosshair(ctx, width, height, zoom) {
   ctx.stroke();
   ctx.restore();
 }
-
 
 function loop(time) {
   const dt = time - lastTime;
@@ -165,12 +234,13 @@ function loop(time) {
   }
   drawCrosshair(ctx, canvasRef.width, canvasRef.height, zoomLevel);
 
+  // --- Draws the simple dashed box at the (0,0) origin ---
   if (rfAni) {
       ctx.save();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
       ctx.lineWidth = 1 / zoomLevel;
       ctx.setLineDash([4 / zoomLevel, 2 / zoomLevel]);
-      ctx.strokeRect(-rfAni.frameWidth / 2, -rfAni.frameHeight / 2, rfAni.frameWidth, rfAni.frameHeight);
+      ctx.strokeRect(0, 0, rfAni.frameWidth, rfAni.frameHeight);
       ctx.restore();
   }
 
@@ -193,12 +263,10 @@ function loop(time) {
         }
     }
     
-    // --- KEY CHANGE: DRAWING LOGIC ---
-    // We now draw all sprites by looking up their source image from the Map.
     const currentFrameSprites = frameSprites.get(rfAni.index) || [];
     for (const s of currentFrameSprites) {
         const sourceImage = spritesheetSources.get(s.sourceName);
-        if (sourceImage) { // Only draw if the source image is loaded
+        if (sourceImage) {
             ctx.save();
             const { sWidth, sHeight } = s.sourceRect;
             const drawX = s.x + sWidth / 2;
@@ -209,36 +277,39 @@ function loop(time) {
             ctx.restore();
         }
     }
-    // Update selection highlight logic
-    if (selectedSprite && currentFrameSprites.includes(selectedSprite)) {
-        const sourceImage = spritesheetSources.get(selectedSprite.sourceName);
-        if(sourceImage) {
-            ctx.save();
-            ctx.strokeStyle = '#00aaff';
-            ctx.lineWidth = 2 / zoomLevel;
-            const s = selectedSprite;
+    
+    ctx.strokeStyle = '#00aaff';
+    ctx.lineWidth = 2 / zoomLevel;
+    for (const s of selectedSprites) {
+        if (currentFrameSprites.includes(s)) {
             const { sWidth, sHeight } = s.sourceRect;
             const centerX = s.x + sWidth / 2;
             const centerY = s.y + sHeight / 2;
+            ctx.save();
             ctx.translate(centerX, centerY);
             ctx.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
             ctx.strokeRect(-sWidth / 2, -sHeight / 2, sWidth, sHeight);
             ctx.restore();
         }
     }
-    // --- END KEY CHANGE ---
+
+    if (marqueeRect) {
+        ctx.strokeStyle = 'rgba(0, 170, 255, 0.8)';
+        ctx.fillStyle = 'rgba(0, 170, 255, 0.2)';
+        ctx.lineWidth = 1 / zoomLevel;
+        ctx.fillRect(marqueeRect.x, marqueeRect.y, marqueeRect.w, marqueeRect.h);
+        ctx.strokeRect(marqueeRect.x, marqueeRect.y, marqueeRect.w, marqueeRect.h);
+    }
   }
 
   ctx.restore();
   requestAnimationFrame(loop);
 }
-
-// --- KEY CHANGE: LOADING LOGIC ---
-
 export async function loadAnimation(data, onReady, shouldSave = true) {
     spritesheetSources.clear();
     frameSprites.clear();
     frameDurations.clear();
+    clearSelection();
     
     if (data.frameSprites) {
         for (const [frameIndex, sprites] of Object.entries(data.frameSprites)) {
@@ -259,37 +330,29 @@ export async function loadAnimation(data, onReady, shouldSave = true) {
     
     const requiredSources = data.sources || [];
     if (requiredSources.length > 0) {
-        
-        // --- NEW: Smart Loading Logic ---
         const sourcesToLoadFromURL = [];
         const sourcesToPromptFor = [];
         const defaultSheetMap = new Map(defaultSheets.map(def => [def.name, def]));
 
         for (const sourceName of requiredSources) {
             if (defaultSheetMap.has(sourceName)) {
-                // This is a default asset, load it automatically from its URL.
                 sourcesToLoadFromURL.push(defaultSheetMap.get(sourceName));
             } else {
-                // This is a custom asset, ask the user to upload the file.
                 sourcesToPromptFor.push(sourceName);
             }
         }
         
-        // 1. Load the default assets automatically.
         if (sourcesToLoadFromURL.length > 0) {
-            // The first load clears the palette (the default behavior).
-            await loadAndDisplaySheets(sourcesToLoadFromURL);
+            await loadAndDisplaySheets(sourcesToLoadFromURL, true);
         }
 
-        // 2. Prompt the user for any custom assets.
         if (sourcesToPromptFor.length > 0) {
             const main = await import('../js/main.js');
             const sourceFileMap = await main.promptForMissingFiles(sourcesToPromptFor);
 
             if (sourceFileMap.size > 0) {
                 const customSheetDefs = Array.from(sourceFileMap.entries()).map(([name, file]) => ({ name, file }));
-                // The second load does NOT clear the palette, it appends to it.
-                await loadAndDisplaySheets(customSheetDefs, false);
+                await loadAndDisplaySheets(customSheetDefs, sourcesToLoadFromURL.length === 0);
             }
         }
     }
@@ -300,7 +363,6 @@ export async function loadAnimation(data, onReady, shouldSave = true) {
         saveState();
     }
 }
-// --- END KEY CHANGE ---
 
 export function getFrames() {
   return rfAni ? rfAni.frames : [];
@@ -309,10 +371,10 @@ export function getFrames() {
 export function setFrameIndex(index) {
   if (rfAni) {
     rfAni.index = Math.max(0, Math.min(rfAni.frames.length - 1, index));
+    clearSelection();
   }
 }
 
-// ... (removeFrame and moveFrame remain mostly the same, no core logic change) ...
 export function removeFrame(index) {
   if (!rfAni) return;
   const frames = rfAni.frames.slice();
@@ -346,6 +408,7 @@ export function moveFrame(oldIndex, newIndex) {
   frames.splice(newIndex, 0, f);
   rfAni.setFrames(frames);
   rfAni.index = newIndex;
+  
   const tempSpriteList = [];
   for (let i = 0; i < frames.length; i++) {
     tempSpriteList.push(frameSprites.get(i));
@@ -361,8 +424,6 @@ export function moveFrame(oldIndex, newIndex) {
   saveState();
 }
 
-
-// --- KEY CHANGE: FRAME PREVIEW ---
 export function createFramePreview(index, scale = 2) {
     if (!rfAni) return null;
     const canvas = document.createElement('canvas');
@@ -393,12 +454,11 @@ export function createFramePreview(index, scale = 2) {
     c.restore();
     return canvas;
 }
-// --- END KEY CHANGE ---
 
 export function addFrame(frameData = null, initialSprites = null) {
   if (!rfAni) return;
   const frames = rfAni.frames.slice();
-  frames.push([-1, -1]); // Add a "blank" base frame
+  frames.push([-1, -1]);
   rfAni.setFrames(frames);
   const newFrameIndex = frames.length - 1;
   if (initialSprites && initialSprites.length > 0) {
@@ -417,36 +477,6 @@ export function setSpeed(speed) {
   saveState();
 }
 
-// --- KEY CHANGE: SAVING DATA ---
-export function getAnimationData() {
-  if (!rfAni) return null;
-  const frameSpritesData = {};
-  for (const [frameIndex, sprites] of frameSprites.entries()) {
-    frameSpritesData[frameIndex] = sprites.map(sprite => ({
-      sourceName: sprite.sourceName, // Save the name of the source image
-      sourceRect: sprite.sourceRect,
-      x: sprite.x,
-      y: sprite.y,
-      flipH: sprite.flipH,
-      flipV: sprite.flipV
-    }));
-  }
-  return {
-    name: rfAni.name,
-    // We no longer save a single image name, but a list of sources.
-    sources: Array.from(spritesheetSources.keys()),
-    frameWidth: rfAni.frameWidth,
-    frameHeight: rfAni.frameHeight,
-    frames: rfAni.frames.slice(),
-    speed: rfAni.speed,
-    frameSprites: frameSpritesData,
-    frameDurations: Object.fromEntries(frameDurations)
-  };
-}
-// --- END KEY CHANGE ---
-
-// --- KEY CHANGE: ADDING A SPRITE ---
-// It now accepts a sourceName to identify the spritesheet.
 export function addCanvasSprite(sourceName, sourceRect, x = 0, y = 0) {
   if (!rfAni) return;
   const currentFrame = rfAni.index;
@@ -456,7 +486,6 @@ export function addCanvasSprite(sourceName, sourceRect, x = 0, y = 0) {
   frameSprites.get(currentFrame).push({ sourceName, sourceRect, x, y, flipH: false, flipV: false });
   saveState();
 }
-// --- END KEY CHANGE ---
 
 export function screenToWorld(x, y) {
   const cx = canvasRef.width / 2;
@@ -470,14 +499,13 @@ export function screenToWorld(x, y) {
 const hitCanvas = document.createElement('canvas');
 const hitCtx = hitCanvas.getContext('2d');
 
-// --- KEY CHANGE: PIXEL-PERFECT SELECTION ---
 export function getSpriteAtPoint(x, y) {
     if (!rfAni) return null;
     const currentFrameSprites = frameSprites.get(rfAni.index) || [];
     for (let i = currentFrameSprites.length - 1; i >= 0; i--) {
         const s = currentFrameSprites[i];
         const sourceImage = spritesheetSources.get(s.sourceName);
-        if (!sourceImage) continue; // Can't select a sprite whose source isn't loaded
+        if (!sourceImage) continue;
 
         const { sWidth, sHeight } = s.sourceRect;
         if (x >= s.x && x <= s.x + sWidth && y >= s.y && y <= s.y + sHeight) {
@@ -495,16 +523,16 @@ export function getSpriteAtPoint(x, y) {
             hitCtx.restore();
             const localX = Math.floor(x - s.x);
             const localY = Math.floor(y - s.y);
-            const pixelData = hitCtx.getImageData(localX, localY, 1, 1).data;
-            if (pixelData[3] > 0) {
-                return s;
-            }
+            try {
+                const pixelData = hitCtx.getImageData(localX, localY, 1, 1).data;
+                if (pixelData[3] > 0) {
+                    return s;
+                }
+            } catch (e) { }
         }
     }
     return null;
 }
-// --- END KEY CHANGE ---
-
 
 export function removeSpriteFromCurrentFrame(sprite) {
   if (!rfAni) return;
@@ -513,17 +541,12 @@ export function removeSpriteFromCurrentFrame(sprite) {
   const index = sprites.indexOf(sprite);
   if (index > -1) {
     sprites.splice(index, 1);
-    saveState();
   }
 }
 
 export function getFrameSprites(frameIndex) {
-    const sprites = frameSprites.get(frameIndex) || [];
-    // Deep copy sprites to prevent mutation issues with copy/paste
-    return sprites.map(s => ({
-        ...s,
-        sourceRect: { ...s.sourceRect }
-    }));
+    // This now correctly returns direct references to the sprites, not copies.
+    return frameSprites.get(frameIndex) || [];
 }
 
 export function setRfAni(instance) {
@@ -536,7 +559,6 @@ export function setRfAni(instance) {
   }
 }
 
-// ... (Other functions like setFrameDuration, setFrameWidth, etc., remain the same) ...
 export function setFrameDuration(index, duration) {
   frameDurations.set(index, duration);
   saveState();
@@ -570,7 +592,6 @@ export function moveSpriteLayer(sprite, direction) {
   if (newIndex >= 0 && newIndex < sprites.length) {
     sprites.splice(index, 1);
     sprites.splice(newIndex, 0, sprite);
-    saveState();
   }
 }
 
@@ -587,10 +608,34 @@ export function redo() {
 export function getCurrentFrameIndex() {
     return rfAni ? rfAni.index : 0;
 }
+
 export function pasteFrameData(index, copiedData) {
     if (!rfAni || !copiedData || !copiedData.sprites) return;
-
-    // Replace the sprites of the target frame with a deep copy of the copied sprites.
     frameSprites.set(index, structuredClone(copiedData.sprites));
-    saveState(); // Save the new state for undo/redo
+    saveState();
+}
+
+export function getAnimationData() {
+  if (!rfAni) return null;
+  const frameSpritesData = {};
+  for (const [frameIndex, sprites] of frameSprites.entries()) {
+    frameSpritesData[frameIndex] = sprites.map(sprite => ({
+      sourceName: sprite.sourceName,
+      sourceRect: sprite.sourceRect,
+      x: sprite.x,
+      y: sprite.y,
+      flipH: sprite.flipH,
+      flipV: sprite.flipV
+    }));
+  }
+  return {
+    name: rfAni.name,
+    sources: Array.from(spritesheetSources.keys()),
+    frameWidth: rfAni.frameWidth,
+    frameHeight: rfAni.frameHeight,
+    frames: rfAni.frames.slice(),
+    speed: rfAni.speed,
+    frameSprites: frameSpritesData,
+    frameDurations: Object.fromEntries(frameDurations)
+  };
 }

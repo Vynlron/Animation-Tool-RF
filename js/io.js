@@ -1,10 +1,10 @@
-import { getAnimationData, createFramePreview, getFrameDuration, getFrames } from '../studio/studio.js';
+import { createFramePreview, getFrameDuration, getFrames, getAnimationData } from '../studio/studio.js';
 
 let showAppModal = null;
 let showContentModal = null;
 
 function handleExport() {
-    const data = getAnimationData();
+    const data = getAnimationData(); // Change this line
     if (!data || !showAppModal) return;
 
     showAppModal({

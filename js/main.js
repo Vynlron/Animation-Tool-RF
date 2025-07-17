@@ -2,7 +2,7 @@ import {
     initStudio, 
     loadAnimation, 
     setRfAni, 
-    getAnimationData,
+    getEditorState, // Change this line
     setFrameWidth,
     setFrameHeight
 } from '../studio/studio.js';
@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             onConfirm: async (name) => {
                 const newAni = new RfAni(new Image(), 20, 20, [], 200, name, '');
                 setRfAni(newAni);
-                const data = getAnimationData();
+                const data = getEditorState();
                 showStudio(data);
 
                 await loadAndDisplaySheets(defaultSheets);

@@ -1,33 +1,50 @@
-import { 
-    pan, 
-    addCanvasSprite, 
-    screenToWorld, 
-    getSpriteAtPoint, 
-    removeSpriteFromCurrentFrame, 
-    selectedSprite, 
-    setSelectedSprite,
-    moveSpriteLayer,
-    undo,
-    redo,
-    saveState
+
+// js/tools.js
+
+import {
+  pan,
+  screenToWorld,
+  getSpriteAtPoint,
+  removeSpriteFromCurrentFrame,
+  moveSpriteLayer,
+  undo,
+  redo,
+  saveState,
+  selectedSprites,
+  clearSelection,
+  addToSelection,
+  getFrameSprites,
+  getCurrentFrameIndex,
+  marqueeRect,
+  setMarqueeRect,
+  clearMarqueeRect
 } from '../studio/studio.js';
-// Obsolete import removed: import { addSpriteToPanel } from './sprites.js';
 
 let isGridVisible = true;
 let isPlaying = false;
 let isLooping = true;
-let activeTool = '';
+
 let isPanning = false;
-let isDragging = false;
-let panStart = { x: 0, y: 0 };
-let dragOffset = { x: 0, y: 0 };
+let isMarqueeSelecting = false;
+let isDraggingSprite = false;
+let lastMousePos = { x: 0, y: 0 };
+let marqueeStart = { x: 0, y: 0 };
+
+function intersects(rect1, rect2) {
+  return !(rect2.x > rect1.x + rect1.w ||
+           rect2.x + rect2.w < rect1.x ||
+           rect2.y > rect1.y + rect1.h ||
+           rect2.y + rect2.h < rect1.y);
+}
 
 function updateSpriteOptionsPanel() {
   const panel = document.getElementById('sprite-options');
+  if (!panel) return;
+  
   const timeline = document.querySelector('.frame-panel');
-
-  if (selectedSprite) {
-    const timelineHeight = timeline.offsetHeight;
+  const timelineHeight = timeline ? timeline.offsetHeight : 0;
+  
+  if (selectedSprites.length > 0) {
     panel.style.bottom = `${timelineHeight + 10}px`;
     panel.style.display = 'flex';
   } else {
@@ -36,15 +53,6 @@ function updateSpriteOptionsPanel() {
 }
 
 export function initTools(canvas) {
-  function setActiveTool(id) {
-    activeTool = id;
-    document.querySelectorAll('.studio-sidebar button').forEach(btn => {
-      btn.classList.toggle('active', btn.id === id);
-    });
-  }
-
-  setActiveTool('tool-pan');
-
   document.getElementById('tool-toggle-grid').addEventListener('click', () => {
     isGridVisible = !isGridVisible;
   });
@@ -63,139 +71,159 @@ export function initTools(canvas) {
     isLooping = loopToggle.checked;
   });
 
-  // --- OBSOLETE CODE REMOVED ---
-  // The event listeners for 'tool-add-sprite', 'add-sprite-right-btn',
-  // and 'sprite-loader' have been removed as they are no longer needed.
-  // The new "Load Spritesheet" input handles this functionality now.
-  // --- END REMOVAL ---
-
-  document.getElementById('tool-pan').addEventListener('click', () => {
-    setActiveTool('tool-pan');
-  });
-  
   document.getElementById('flip-h').addEventListener('click', () => {
-      if (selectedSprite) {
-          selectedSprite.flipH = !selectedSprite.flipH;
-          saveState();
-      }
+    selectedSprites.forEach(sprite => sprite.flipH = !sprite.flipH);
+    if (selectedSprites.length > 0) saveState();
   });
   
   document.getElementById('flip-v').addEventListener('click', () => {
-      if (selectedSprite) {
-          selectedSprite.flipV = !selectedSprite.flipV;
-          saveState();
-      }
+    selectedSprites.forEach(sprite => sprite.flipV = !sprite.flipV);
+    if (selectedSprites.length > 0) saveState();
   });
 
   document.getElementById('layer-up').addEventListener('click', () => {
-      if (selectedSprite) {
-          moveSpriteLayer(selectedSprite, 1);
-      }
+    selectedSprites.forEach(sprite => moveSpriteLayer(sprite, 1));
+    if (selectedSprites.length > 0) saveState();
   });
 
   document.getElementById('layer-down').addEventListener('click', () => {
-      if (selectedSprite) {
-          moveSpriteLayer(selectedSprite, -1);
-      }
+    // Reverse the array to move the top-most item down first
+    [...selectedSprites].reverse().forEach(sprite => moveSpriteLayer(sprite, -1));
+    if (selectedSprites.length > 0) saveState();
   });
 
   document.getElementById('delete-selected-sprite').addEventListener('click', () => {
-      if (selectedSprite) {
-          removeSpriteFromCurrentFrame(selectedSprite);
-          setSelectedSprite(null);
-          updateSpriteOptionsPanel();
-      }
+    if (selectedSprites.length > 0) {
+        selectedSprites.forEach(sprite => removeSpriteFromCurrentFrame(sprite));
+        saveState();
+    }
+    clearSelection();
+    updateSpriteOptionsPanel();
   });
 
-  canvas.addEventListener('mousedown', (e) => {
-    if (e.button !== 0) return;
-    const pos = screenToWorld(e.offsetX, e.offsetY);
-    const sprite = getSpriteAtPoint(pos.x, pos.y);
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-    if (sprite) {
-      setSelectedSprite(sprite);
-      isDragging = true;
-      dragOffset = { x: pos.x - sprite.x, y: pos.y - sprite.y };
-    } else {
-      setSelectedSprite(null);
-      if (activeTool === 'tool-pan') {
-        isPanning = true;
-        panStart = { x: e.clientX, y: e.clientY };
+  canvas.addEventListener('mousedown', (e) => {
+    const worldPos = screenToWorld(e.offsetX, e.offsetY);
+    lastMousePos = { x: e.offsetX, y: e.offsetY };
+
+    if (e.button === 2) {
+      isPanning = true;
+      canvas.style.cursor = 'grabbing';
+    } else if (e.button === 0) {
+      const spriteUnderCursor = getSpriteAtPoint(worldPos.x, worldPos.y);
+
+      if (spriteUnderCursor) {
+        isDraggingSprite = true;
+        if (e.shiftKey) {
+          addToSelection(spriteUnderCursor);
+        } else if (!selectedSprites.includes(spriteUnderCursor)) {
+          clearSelection();
+          addToSelection(spriteUnderCursor);
+        }
+      } else {
+        isMarqueeSelecting = true;
+        marqueeStart = worldPos;
+        if (!e.shiftKey) {
+          clearSelection();
+        }
       }
     }
     updateSpriteOptionsPanel();
   });
 
-  document.addEventListener('mousemove', (e) => {
-    if (isDragging && selectedSprite) {
-      const rect = canvas.getBoundingClientRect();
-      const pos = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
-      selectedSprite.x = pos.x - dragOffset.x;
-      selectedSprite.y = pos.y - dragOffset.y;
-    } else if (isPanning) {
-      const dx = e.clientX - panStart.x;
-      const dy = e.clientY - panStart.y;
-      panStart = { x: e.clientX, y: e.clientY };
+  canvas.addEventListener('mousemove', (e) => {
+    if (isPanning) {
+      const dx = e.offsetX - lastMousePos.x;
+      const dy = e.offsetY - lastMousePos.y;
       pan(dx, dy);
+      lastMousePos = { x: e.offsetX, y: e.offsetY };
+    } else if (isDraggingSprite) {
+      const worldPos = screenToWorld(e.offsetX, e.offsetY);
+      const worldLastPos = screenToWorld(lastMousePos.x, lastMousePos.y);
+      const dx = worldPos.x - worldLastPos.x;
+      const dy = worldPos.y - worldLastPos.y;
+      selectedSprites.forEach(sprite => {
+        sprite.x += dx;
+        sprite.y += dy;
+      });
+      lastMousePos = { x: e.offsetX, y: e.offsetY };
+    } else if (isMarqueeSelecting) {
+      const worldPos = screenToWorld(e.offsetX, e.offsetY);
+      const x = Math.min(marqueeStart.x, worldPos.x);
+      const y = Math.min(marqueeStart.y, worldPos.y);
+      const w = Math.abs(marqueeStart.x - worldPos.x);
+      const h = Math.abs(marqueeStart.y - worldPos.y);
+      setMarqueeRect({ x, y, w, h });
     }
   });
 
-  document.addEventListener('mouseup', (e) => {
-    if (isDragging) {
+  canvas.addEventListener('mouseup', () => {
+    if (isMarqueeSelecting) {
+      let spritesSelected = false;
+      if (marqueeRect) {
+        const allSpritesInFrame = getFrameSprites(getCurrentFrameIndex());
+        allSpritesInFrame.forEach(sprite => {
+          const spriteRect = {
+            x: sprite.x,
+            y: sprite.y,
+            w: sprite.sourceRect.sWidth,
+            h: sprite.sourceRect.sHeight
+          };
+          if (intersects(marqueeRect, spriteRect)) {
+            addToSelection(sprite);
+            spritesSelected = true;
+          }
+        });
+      }
+      clearMarqueeRect();
+      if (spritesSelected) {
         saveState();
+      }
     }
+
+    if (isDraggingSprite) {
+      saveState();
+    }
+
     isPanning = false;
-    isDragging = false;
+    isMarqueeSelecting = false;
+    isDraggingSprite = false;
+    canvas.style.cursor = 'grab';
+    updateSpriteOptionsPanel();
   });
 
-  canvas.addEventListener('dragover', (e) => e.preventDefault());
-  
   window.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'z') {
-            e.preventDefault();
-            undo();
-            return;
-        }
-        if (e.key === 'y') {
-            e.preventDefault();
-            redo();
-            return;
-        }
+      if (e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
+      if (e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
+      return;
     }
 
     if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
       return;
     }
 
-    if (selectedSprite) {
+    if (selectedSprites.length > 0) {
       let moved = false;
       const increment = e.shiftKey ? 10 : 1;
       switch (e.key) {
-        case 'ArrowUp':   selectedSprite.y -= increment; moved = true; break;
-        case 'ArrowDown': selectedSprite.y += increment; moved = true; break;
-        case 'ArrowLeft': selectedSprite.x -= increment; moved = true; break;
-        case 'ArrowRight':selectedSprite.x += increment; moved = true; break;
+        case 'ArrowUp':   selectedSprites.forEach(s => s.y -= increment); moved = true; break;
+        case 'ArrowDown': selectedSprites.forEach(s => s.y += increment); moved = true; break;
+        case 'ArrowLeft': selectedSprites.forEach(s => s.x -= increment); moved = true; break;
+        case 'ArrowRight':selectedSprites.forEach(s => s.x += increment); moved = true; break;
       }
-      if (moved) {
-        e.preventDefault();
-      }
+      if (moved) e.preventDefault();
     }
   });
   
   window.addEventListener('keyup', (e) => {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selectedSprite) {
-          saveState();
-      }
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selectedSprites.length > 0) {
+      saveState();
+    }
   });
 
   updateSpriteOptionsPanel();
-
-  window.addEventListener('resize', () => {
-      if (selectedSprite) {
-          updateSpriteOptionsPanel();
-      }
-  });
 }
 
 export function isPlaybackEnabled() {
