@@ -240,3 +240,38 @@ export function promptForMissingFiles(requiredFiles) {
         }, { once: true });
     });
 }
+
+// In js/main.js, add this new function
+
+export function promptForDimensions(filename) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('dimension-modal');
+    document.getElementById('dimension-modal-filename').textContent = filename;
+    
+    const widthInput = document.getElementById('sprite-w-input');
+    const heightInput = document.getElementById('sprite-h-input');
+    const confirmBtn = document.getElementById('dimension-confirm-btn');
+
+    // Reset to default values
+    widthInput.value = 20;
+    heightInput.value = 20;
+
+    const onConfirm = () => {
+      const width = parseInt(widthInput.value, 10);
+      const height = parseInt(heightInput.value, 10);
+
+      if (width > 0 && height > 0) {
+        modal.classList.add('hidden');
+        // Remove the event listener to prevent memory leaks
+        confirmBtn.removeEventListener('click', onConfirm);
+        resolve({ width, height });
+      } else {
+        alert('Please enter valid dimensions greater than 0.');
+      }
+    };
+    
+    confirmBtn.addEventListener('click', onConfirm);
+    modal.classList.remove('hidden');
+    widthInput.focus();
+  });
+}

@@ -273,6 +273,8 @@ function loop(time) {
             const drawY = s.y + sHeight / 2;
             ctx.translate(drawX, drawY);
             ctx.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
+            const scale = s.scale ?? 1;
+            ctx.scale(scale * (s.flipH ? -1 : 1), scale * (s.flipV ? -1 : 1));
             ctx.drawImage(sourceImage, s.sourceRect.sx, s.sourceRect.sy, sWidth, sHeight, -sWidth / 2, -sHeight / 2, sWidth, sHeight);
             ctx.restore();
         }
@@ -314,7 +316,7 @@ export async function loadAnimation(data, onReady, shouldSave = true) {
     if (data.frameSprites) {
         for (const [frameIndex, sprites] of Object.entries(data.frameSprites)) {
             const loadedSprites = sprites.map(spriteData => {
-                return { ...spriteData, flipH: spriteData.flipH || false, flipV: spriteData.flipV || false };
+                return { ...spriteData, flipH: spriteData.flipH || false, flipV: spriteData.flipV || false, scale: spriteData.scale ?? 1 };
             });
             frameSprites.set(parseInt(frameIndex), loadedSprites.filter(s => s));
         }

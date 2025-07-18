@@ -1,4 +1,3 @@
-
 // js/tools.js
 
 import {
@@ -32,21 +31,28 @@ let marqueeStart = { x: 0, y: 0 };
 
 function intersects(rect1, rect2) {
   return !(rect2.x > rect1.x + rect1.w ||
-           rect2.x + rect2.w < rect1.x ||
+           rect2.x + rect1.w < rect1.x ||
            rect2.y > rect1.y + rect1.h ||
-           rect2.y + rect2.h < rect1.y);
+           rect2.y + rect1.h < rect1.y);
 }
 
 function updateSpriteOptionsPanel() {
   const panel = document.getElementById('sprite-options');
   if (!panel) return;
-  
+
   const timeline = document.querySelector('.frame-panel');
   const timelineHeight = timeline ? timeline.offsetHeight : 0;
-  
+
   if (selectedSprites.length > 0) {
     panel.style.bottom = `${timelineHeight + 10}px`;
     panel.style.display = 'flex';
+
+    if (selectedSprites.length === 1) {
+      const s = selectedSprites[0];
+      document.getElementById('sprite-scale').value = s.scale ?? 1;
+    } else {
+      document.getElementById('sprite-scale').value = '';
+    }
   } else {
     panel.style.display = 'none';
   }
@@ -75,7 +81,7 @@ export function initTools(canvas) {
     selectedSprites.forEach(sprite => sprite.flipH = !sprite.flipH);
     if (selectedSprites.length > 0) saveState();
   });
-  
+
   document.getElementById('flip-v').addEventListener('click', () => {
     selectedSprites.forEach(sprite => sprite.flipV = !sprite.flipV);
     if (selectedSprites.length > 0) saveState();
@@ -87,19 +93,30 @@ export function initTools(canvas) {
   });
 
   document.getElementById('layer-down').addEventListener('click', () => {
-    // Reverse the array to move the top-most item down first
     [...selectedSprites].reverse().forEach(sprite => moveSpriteLayer(sprite, -1));
     if (selectedSprites.length > 0) saveState();
   });
 
   document.getElementById('delete-selected-sprite').addEventListener('click', () => {
     if (selectedSprites.length > 0) {
-        selectedSprites.forEach(sprite => removeSpriteFromCurrentFrame(sprite));
-        saveState();
+      selectedSprites.forEach(sprite => removeSpriteFromCurrentFrame(sprite));
+      saveState();
     }
     clearSelection();
     updateSpriteOptionsPanel();
   });
+
+  // ✅ Sprite scale input
+  const scaleInput = document.getElementById('sprite-scale');
+  if (scaleInput) {
+    scaleInput.addEventListener('change', () => {
+      const scale = parseFloat(scaleInput.value);
+      if (!isNaN(scale) && scale > 0) {
+        selectedSprites.forEach(sprite => sprite.scale = scale);
+        saveState();
+      }
+    });
+  }
 
   canvas.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -167,8 +184,8 @@ export function initTools(canvas) {
           const spriteRect = {
             x: sprite.x,
             y: sprite.y,
-            w: sprite.sourceRect.sWidth,
-            h: sprite.sourceRect.sHeight
+            w: sprite.sourceRect.sWidth * (sprite.scale ?? 1),
+            h: sprite.sourceRect.sHeight * (sprite.scale ?? 1)
           };
           if (intersects(marqueeRect, spriteRect)) {
             addToSelection(sprite);
@@ -216,7 +233,7 @@ export function initTools(canvas) {
       if (moved) e.preventDefault();
     }
   });
-  
+
   window.addEventListener('keyup', (e) => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selectedSprites.length > 0) {
       saveState();
@@ -231,11 +248,11 @@ export function isPlaybackEnabled() {
 }
 
 export function isLoopingEnabled() {
-    return isLooping;
+  return isLooping;
 }
 
 export function pausePlayback() {
-    isPlaying = false;
+  isPlaying = false;
 }
 
 export function isGridEnabled() {

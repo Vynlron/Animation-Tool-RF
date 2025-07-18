@@ -4,6 +4,7 @@ import {
     addSpritesheet,
     clearSpritesheets
 } from '../studio/studio.js';
+import { promptForDimensions } from './main.js'; // <-- Add this import at the top of the file
 
 let isDraggingFromPalette = false;
 
@@ -63,76 +64,88 @@ function loadImage(source) {
 // --- NEW: A single, powerful function to handle all sheet loading ---
 
 export async function loadAndDisplaySheets(sheetDefs, clearPalette = true) {
-    // --- ADD THIS LINE ---
-    const panel = document.getElementById('sprite-selector-panel');
-    
-    // The incorrect call to clearSpritesheets() is confirmed to be removed here.
-    
-    if (clearPalette) {
-        panel.innerHTML = '';
-    }
+  const panel = document.getElementById('sprite-selector-panel');
+  
+  if (clearPalette) {
+      panel.innerHTML = '';
+  }
 
-    if (!sheetDefs || !sheetDefs.length === 0) return;
+  if (!sheetDefs || sheetDefs.length === 0) return;
 
-    try {
-        const imagePromises = sheetDefs.map(loadImage);
-        const images = await Promise.all(imagePromises);
+  try {
+    const imagePromises = sheetDefs.map(def => def.file ? loadImage(def.file) : loadImage(def));
+    const images = await Promise.all(imagePromises);
 
-        images.forEach((image, index) => {
-            const def = sheetDefs[index];
-            const name = def.name;
-            const displayName = def.displayName || name;
-            addSpritesheet(name, image);
+    images.forEach((image, index) => {
+      const def = sheetDefs[index];
+      const name = def.name;
 
-            const column = document.createElement('div');
-            column.className = 'spritesheet-column';
+      // --- THIS IS THE FIX ---
+      // If dimensions are provided (from the file loader), use them.
+      // Otherwise, fall back to our default tile size of 20 for the initial sheets.
+      const spriteWidth = def.spriteWidth || 20;
+      const spriteHeight = def.spriteHeight || 20;
+      
+      addSpritesheet(name, image);
 
-            const title = document.createElement('h3');
-            title.textContent = displayName;
-            
-            const grid = document.createElement('div');
-            grid.className = 'sprite-grid';
+      const column = document.createElement('div');
+      column.className = 'spritesheet-column';
 
-            column.appendChild(title);
-            column.appendChild(grid);
-            panel.appendChild(column);
+      const title = document.createElement('h3');
+      title.textContent = def.displayName || name;
+      
+      const grid = document.createElement('div');
+      grid.className = 'sprite-grid';
 
-            const tileSize = 20;
-            const cols = Math.floor(image.width / tileSize);
-            const rows = Math.floor(image.height / tileSize);
-            
-            for (let i = 0; i < rows * cols; i++) {
-                const frameX = i % cols;
-                const frameY = Math.floor(i / cols);
-                const sx = frameX * tileSize;
-                const sy = frameY * tileSize;
+      column.appendChild(title);
+      column.appendChild(grid);
+      panel.appendChild(column);
 
-                const spriteItem = createPaletteSprite(name, image, sx, sy, tileSize, tileSize);
-                grid.appendChild(spriteItem);
-            }
-        });
+      const cols = Math.floor(image.width / spriteWidth);
+      const rows = Math.floor(image.height / spriteHeight);
+      
+      for (let i = 0; i < rows * cols; i++) {
+        const frameX = i % cols;
+        const frameY = Math.floor(i / cols);
+        const sx = frameX * spriteWidth;
+        const sy = frameY * spriteHeight;
 
-    } catch (error) {
-        console.error("Failed to load and process spritesheets:", error);
-        alert("There was an error loading the images.");
-    }
-}
-
-// This function now uses our new central loader.
-export function initMultiSpriteLoader() {
-    const loaderInput = document.getElementById('spritesheet-loader-input');
-
-    loaderInput.addEventListener('change', async (event) => {
-        const files = event.target.files;
-        if (files && files.length > 0) {
-            await loadAndDisplaySheets(Array.from(files));
-        }
-        event.target.value = ''; 
+        const spriteItem = createPaletteSprite(name, image, sx, sy, spriteWidth, spriteHeight);
+        grid.appendChild(spriteItem);
+      }
     });
-}
 
+  } catch (error) {
+    console.error("Failed to load and process spritesheets:", error);
+    alert("There was an error loading the images.");
+  }
+}
 function insertSprite(sourceName, sourceRect, x, y) {
   addCanvasSprite(sourceName, sourceRect, x, y);
+}
+// This function now uses our new central loader.
+export function initMultiSpriteLoader() {
+  const loaderInput = document.getElementById('spritesheet-loader-input');
+
+  loaderInput.addEventListener('change', async (event) => {
+    const files = Array.from(event.target.files);
+    if (!files || files.length === 0) return;
+
+    const sheetDefs = [];
+    // Loop through each selected file and ask for its dimensions
+    for (const file of files) {
+      const { width, height } = await promptForDimensions(file.name);
+      sheetDefs.push({
+        file: file,
+        name: file.name,
+        spriteWidth: width,
+        spriteHeight: height
+      });
+    }
+
+    await loadAndDisplaySheets(sheetDefs, false);
+    event.target.value = '';
+  });
 }
 
 export function enableDrop(canvas) {

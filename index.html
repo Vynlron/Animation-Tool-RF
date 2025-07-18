@@ -91,13 +91,14 @@
     </div>
 
     <div id="sprite-options" class="floating-panel" style="display:none;">
-      <span>Options:</span>
-      <button id="flip-h">Flip ↔</button>
-      <button id="flip-v">Flip ↕</button>
-      <button id="layer-up">▲ Forward</button>
-      <button id="layer-down">▼ Backward</button>
-      <button id="delete-selected-sprite">❌ Delete</button>
-    </div>
+  <span>Options:</span>
+  <button id="flip-h">Flip ↔</button>
+  <button id="flip-v">Flip ↕</button>
+  <button id="layer-up">▲ Forward</button>
+  <button id="layer-down">▼ Backward</button>
+  <button id="delete-selected-sprite">❌ Delete</button>
+  <label>Scale <input id="sprite-scale" type="number" step="0.1" min="0.1" max="10" value="1" style="width: 60px;"></label>
+</div>
 
     <div class="frame-panel">
       <div class="frame-controls-row">
@@ -137,6 +138,19 @@
     </div>
   </div>
 
+  <div id="dimension-modal" class="modal hidden">
+    <div class="modal-box">
+      <h3 id="dimension-modal-title">Sprite Dimensions</h3>
+      <p>Enter the dimensions for: <strong id="dimension-modal-filename"></strong></p>
+      <div class="modal-content" style="display: flex; gap: 20px; justify-content: center;">
+        <label>Width: <input type="number" id="sprite-w-input" value="20" min="1"></label>
+        <label>Height: <input type="number" id="sprite-h-input" value="20" min="1"></label>
+      </div>
+      <div class="modal-buttons">
+        <button id="dimension-confirm-btn">Confirm</button>
+      </div>
+    </div>
+  </div>
   <script type="text/javascript" src="js/lib/gif.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>
