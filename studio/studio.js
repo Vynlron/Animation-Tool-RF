@@ -1,5 +1,3 @@
-// studio/studio.js
-
 import { RfAni } from '../engine/rfani.js';
 import { isPlaybackEnabled, isLoopingEnabled, pausePlayback } from '../js/tools.js';
 import { UndoRedoManager } from './UndoRedoManager.js';
@@ -16,7 +14,6 @@ const minZoom = 0.5;
 const maxZoom = 12;
 let canvasRef = null;
 
-// --- Handle multiple selected sprites and marquee ---
 export let selectedSprites = [];
 export let marqueeRect = null;
 
@@ -65,7 +62,6 @@ export function getExportData() {
       continue;
     }
     
-    // Calculate bounding box of all sprites in the frame
     let minX = Infinity, maxX = -Infinity;
     let minY = Infinity, maxY = -Infinity;
     
@@ -76,13 +72,11 @@ export function getExportData() {
       maxY = Math.max(maxY, s.y + s.sourceRect.sHeight);
     });
     
-    // Calculate center point of the bounding box
     const collectiveWidth = maxX - minX;
     const collectiveHeight = maxY - minY;
     const collectiveCenterX = minX + collectiveWidth / 2;
     const collectiveCenterY = minY + collectiveHeight / 2;
     
-    // Transform sprites to be centered around origin (0,0)
     frameSpritesData[frameIndex] = sprites.map(sprite => ({
       sourceName: sprite.sourceName,
       sourceRect: sprite.sourceRect,
@@ -120,32 +114,12 @@ export async function loadState(stateData) {
     }, shouldSave);
 }
 
-export function clearSelection() {
-    selectedSprites = [];
-}
-
-export function addToSelection(sprite) {
-    if (!selectedSprites.includes(sprite)) {
-        selectedSprites.push(sprite);
-    }
-}
-
-export function setSelection(sprites) {
-    selectedSprites = sprites;
-}
-
-export function setMarqueeRect(rect) {
-    marqueeRect = rect;
-}
-
-export function clearMarqueeRect() {
-    marqueeRect = null;
-}
-
-export function pan(dx, dy) {
-  offsetX += dx / zoomLevel;
-  offsetY += dy / zoomLevel;
-}
+export function clearSelection() { selectedSprites = []; }
+export function addToSelection(sprite) { if (!selectedSprites.includes(sprite)) selectedSprites.push(sprite); }
+export function setSelection(sprites) { selectedSprites = sprites; }
+export function setMarqueeRect(rect) { marqueeRect = rect; }
+export function clearMarqueeRect() { marqueeRect = null; }
+export function pan(dx, dy) { offsetX += dx / zoomLevel; offsetY += dy / zoomLevel; }
 
 export function initStudio(canvasElement) {
   canvasRef = canvasElement;
@@ -162,7 +136,6 @@ export function initStudio(canvasElement) {
     e.preventDefault();
     const delta = Math.sign(e.deltaY);
     zoomLevel = Math.max(minZoom, Math.min(maxZoom, zoomLevel + (delta < 0 ? 0.1 : -0.1)));
-    zoomLevel = Math.round(zoomLevel * 10) / 10;
   });
   requestAnimationFrame(loop);
 }
@@ -204,16 +177,8 @@ function drawGrid(ctx, width, height, zoom) {
 function drawCrosshair(ctx, width, height, zoom) {
   ctx.save();
   ctx.lineWidth = 1 / zoom;
-  ctx.strokeStyle = '#aa0000';
-  ctx.beginPath();
-  ctx.moveTo(-10000, 0);
-  ctx.lineTo(10000, 0);
-  ctx.stroke();
-  ctx.strokeStyle = '#0033cc';
-  ctx.beginPath();
-  ctx.moveTo(0, -10000);
-  ctx.lineTo(0, 10000);
-  ctx.stroke();
+  ctx.strokeStyle = '#aa0000'; ctx.beginPath(); ctx.moveTo(-10000, 0); ctx.lineTo(10000, 0); ctx.stroke();
+  ctx.strokeStyle = '#0033cc'; ctx.beginPath(); ctx.moveTo(0, -10000); ctx.lineTo(0, 10000); ctx.stroke();
   ctx.restore();
 }
 
@@ -234,7 +199,6 @@ function loop(time) {
   }
   drawCrosshair(ctx, canvasRef.width, canvasRef.height, zoomLevel);
 
-  // --- Draws the simple dashed box at the (0,0) origin ---
   if (rfAni) {
       ctx.save();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
@@ -242,26 +206,21 @@ function loop(time) {
       ctx.setLineDash([4 / zoomLevel, 2 / zoomLevel]);
       ctx.strokeRect(0, 0, rfAni.frameWidth, rfAni.frameHeight);
       ctx.restore();
-  }
-
-  if (rfAni) {
-    if (isPlaybackEnabled()) {
+      
+      if (isPlaybackEnabled()) {
         const currentDuration = frameDurations.get(rfAni.index) ?? rfAni.speed;
         rfAni.timer += dt;
         if (rfAni.timer >= currentDuration) {
             rfAni.timer = 0;
             const isAtEnd = rfAni.index >= rfAni.frames.length - 1;
             if (isAtEnd) {
-                if (isLoopingEnabled()) {
-                    rfAni.index = 0;
-                } else {
-                    pausePlayback();
-                }
+                if (isLoopingEnabled()) rfAni.index = 0;
+                else pausePlayback();
             } else {
                 rfAni.index++;
             }
         }
-    }
+      }
     
     const currentFrameSprites = frameSprites.get(rfAni.index) || [];
     for (const s of currentFrameSprites) {
@@ -273,25 +232,19 @@ function loop(time) {
             const drawY = s.y + sHeight / 2;
             ctx.translate(drawX, drawY);
             ctx.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
-            const scale = s.scale ?? 1;
-            ctx.scale(scale * (s.flipH ? -1 : 1), scale * (s.flipV ? -1 : 1));
             ctx.drawImage(sourceImage, s.sourceRect.sx, s.sourceRect.sy, sWidth, sHeight, -sWidth / 2, -sHeight / 2, sWidth, sHeight);
             ctx.restore();
         }
     }
     
+    ctx.fillStyle = 'rgba(0, 170, 255, 0.3)';
     ctx.strokeStyle = '#00aaff';
     ctx.lineWidth = 2 / zoomLevel;
     for (const s of selectedSprites) {
         if (currentFrameSprites.includes(s)) {
             const { sWidth, sHeight } = s.sourceRect;
-            const centerX = s.x + sWidth / 2;
-            const centerY = s.y + sHeight / 2;
-            ctx.save();
-            ctx.translate(centerX, centerY);
-            ctx.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
-            ctx.strokeRect(-sWidth / 2, -sHeight / 2, sWidth, sHeight);
-            ctx.restore();
+            ctx.fillRect(s.x, s.y, sWidth, sHeight);
+            ctx.strokeRect(s.x, s.y, sWidth, sHeight);
         }
     }
 
@@ -307,55 +260,33 @@ function loop(time) {
   ctx.restore();
   requestAnimationFrame(loop);
 }
+
 export async function loadAnimation(data, onReady, shouldSave = true) {
-    spritesheetSources.clear();
+    clearSpritesheets();
     frameSprites.clear();
     frameDurations.clear();
     clearSelection();
     
     if (data.frameSprites) {
         for (const [frameIndex, sprites] of Object.entries(data.frameSprites)) {
-            const loadedSprites = sprites.map(spriteData => {
-                return { ...spriteData, flipH: spriteData.flipH || false, flipV: spriteData.flipV || false, scale: spriteData.scale ?? 1 };
-            });
+            const loadedSprites = sprites.map(spriteData => ({ ...spriteData, flipH: spriteData.flipH || false, flipV: spriteData.flipV || false }));
             frameSprites.set(parseInt(frameIndex), loadedSprites.filter(s => s));
         }
     }
-
     if(data.frameDurations) {
         for (const [frameIndex, duration] of Object.entries(data.frameDurations)) {
             frameDurations.set(parseInt(frameIndex), duration);
         }
     }
-    
-    rfAni = new RfAni(new Image(), data.frameWidth, data.frameHeight, data.frames, data.speed, data.name || 'Unnamed', '');
+    setRfAni(new RfAni(new Image(), data.frameWidth, data.frameHeight, data.frames, data.speed, data.name || 'Unnamed', ''));
     
     const requiredSources = data.sources || [];
     if (requiredSources.length > 0) {
-        const sourcesToLoadFromURL = [];
-        const sourcesToPromptFor = [];
-        const defaultSheetMap = new Map(defaultSheets.map(def => [def.name, def]));
-
-        for (const sourceName of requiredSources) {
-            if (defaultSheetMap.has(sourceName)) {
-                sourcesToLoadFromURL.push(defaultSheetMap.get(sourceName));
-            } else {
-                sourcesToPromptFor.push(sourceName);
-            }
-        }
-        
-        if (sourcesToLoadFromURL.length > 0) {
-            await loadAndDisplaySheets(sourcesToLoadFromURL, true);
-        }
-
-        if (sourcesToPromptFor.length > 0) {
-            const main = await import('../js/main.js');
-            const sourceFileMap = await main.promptForMissingFiles(sourcesToPromptFor);
-
-            if (sourceFileMap.size > 0) {
-                const customSheetDefs = Array.from(sourceFileMap.entries()).map(([name, file]) => ({ name, file }));
-                await loadAndDisplaySheets(customSheetDefs, sourcesToLoadFromURL.length === 0);
-            }
+        const main = await import('../js/main.js');
+        const sourceFileMap = await main.promptForMissingFiles(requiredSources);
+        if (sourceFileMap.size > 0) {
+            const customSheetDefs = Array.from(sourceFileMap.entries()).map(([name, file]) => ({ name, file }));
+            await loadAndDisplaySheets(customSheetDefs, true);
         }
     }
 
@@ -364,257 +295,6 @@ export async function loadAnimation(data, onReady, shouldSave = true) {
         historyManager.clear();
         saveState();
     }
-}
-
-export function getFrames() {
-  return rfAni ? rfAni.frames : [];
-}
-
-export function setFrameIndex(index) {
-  if (rfAni) {
-    rfAni.index = Math.max(0, Math.min(rfAni.frames.length - 1, index));
-    clearSelection();
-  }
-}
-
-export function removeFrame(index) {
-  if (!rfAni) return;
-  const frames = rfAni.frames.slice();
-  if (index < 0 || index >= frames.length) return;
-  
-  frames.splice(index, 1);
-  rfAni.setFrames(frames);
-  frameSprites.delete(index);
-  const newFrameSprites = new Map();
-  for (const [frameIndex, sprites] of frameSprites.entries()) {
-    if (frameIndex > index) {
-      newFrameSprites.set(frameIndex - 1, sprites);
-    } else {
-      newFrameSprites.set(frameIndex, sprites);
-    }
-  }
-  frameSprites.clear();
-  for (const [frameIndex, sprites] of newFrameSprites.entries()) {
-    frameSprites.set(frameIndex, sprites);
-  }
-  if (rfAni.index >= frames.length) rfAni.index = frames.length > 0 ? frames.length - 1 : 0;
-  saveState();
-}
-
-export function moveFrame(oldIndex, newIndex) {
-  if (!rfAni) return;
-  const frames = rfAni.frames.slice();
-  if (oldIndex < 0 || oldIndex >= frames.length || newIndex < 0 || newIndex >= frames.length) return;
-
-  const [f] = frames.splice(oldIndex, 1);
-  frames.splice(newIndex, 0, f);
-  rfAni.setFrames(frames);
-  rfAni.index = newIndex;
-  
-  const tempSpriteList = [];
-  for (let i = 0; i < frames.length; i++) {
-    tempSpriteList.push(frameSprites.get(i));
-  }
-  const [movedSprites] = tempSpriteList.splice(oldIndex, 1);
-  tempSpriteList.splice(newIndex, 0, movedSprites);
-  frameSprites.clear();
-  tempSpriteList.forEach((sprites, i) => {
-    if (sprites) {
-      frameSprites.set(i, sprites);
-    }
-  });
-  saveState();
-}
-
-export function createFramePreview(index, scale = 2) {
-    if (!rfAni) return null;
-    const canvas = document.createElement('canvas');
-    canvas.width = rfAni.frameWidth * scale;
-    canvas.height = rfAni.frameHeight * scale;
-    const c = canvas.getContext('2d');
-    c.imageSmoothingEnabled = false;
-    c.fillStyle = '#111';
-    c.fillRect(0, 0, canvas.width, canvas.height);
-
-    const sprites = frameSprites.get(index) || [];
-    c.save();
-    c.translate(canvas.width / 2, canvas.height / 2);
-
-    for (const s of sprites) {
-        const sourceImage = spritesheetSources.get(s.sourceName);
-        if (sourceImage) {
-            c.save();
-            const { sWidth, sHeight } = s.sourceRect;
-            const centerX = s.x + sWidth / 2;
-            const centerY = s.y + sHeight / 2;
-            c.translate(centerX * scale, centerY * scale);
-            c.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
-            c.drawImage(sourceImage, s.sourceRect.sx, s.sourceRect.sy, sWidth, sHeight, (-sWidth / 2) * scale, (-sHeight / 2) * scale, sWidth * scale, sHeight * scale);
-            c.restore();
-        }
-    }
-    c.restore();
-    return canvas;
-}
-
-export function addFrame(frameData = null, initialSprites = null) {
-  if (!rfAni) return;
-  const frames = rfAni.frames.slice();
-  frames.push([-1, -1]);
-  rfAni.setFrames(frames);
-  const newFrameIndex = frames.length - 1;
-  if (initialSprites && initialSprites.length > 0) {
-    frameSprites.set(newFrameIndex, initialSprites);
-  } else {
-    if (!frameSprites.has(newFrameIndex)) {
-      frameSprites.set(newFrameIndex, []);
-    }
-  }
-  frameDurations.set(newFrameIndex, 100);
-  saveState();
-}
-
-export function setSpeed(speed) {
-  if (rfAni) rfAni.setSpeed(speed);
-  saveState();
-}
-
-export function addCanvasSprite(sourceName, sourceRect, x = 0, y = 0) {
-  if (!rfAni) return;
-  const currentFrame = rfAni.index;
-  if (!frameSprites.has(currentFrame)) {
-    frameSprites.set(currentFrame, []);
-  }
-  frameSprites.get(currentFrame).push({ sourceName, sourceRect, x, y, flipH: false, flipV: false });
-  saveState();
-}
-
-export function screenToWorld(x, y) {
-  const cx = canvasRef.width / 2;
-  const cy = canvasRef.height / 2;
-  return {
-    x: (x - cx) / zoomLevel - offsetX,
-    y: (y - cy) / zoomLevel - offsetY
-  };
-}
-
-const hitCanvas = document.createElement('canvas');
-const hitCtx = hitCanvas.getContext('2d');
-
-export function getSpriteAtPoint(x, y) {
-    if (!rfAni) return null;
-    const currentFrameSprites = frameSprites.get(rfAni.index) || [];
-    for (let i = currentFrameSprites.length - 1; i >= 0; i--) {
-        const s = currentFrameSprites[i];
-        const sourceImage = spritesheetSources.get(s.sourceName);
-        if (!sourceImage) continue;
-
-        const { sWidth, sHeight } = s.sourceRect;
-        if (x >= s.x && x <= s.x + sWidth && y >= s.y && y <= s.y + sHeight) {
-            hitCanvas.width = sWidth;
-            hitCanvas.height = sHeight;
-            hitCtx.clearRect(0, 0, hitCanvas.width, hitCanvas.height);
-            hitCtx.save();
-            if(s.flipH || s.flipV) {
-                hitCtx.translate(sWidth / 2, sHeight / 2);
-                hitCtx.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
-                hitCtx.drawImage(sourceImage, s.sourceRect.sx, s.sourceRect.sy, sWidth, sHeight, -sWidth / 2, -sHeight / 2, sWidth, sHeight);
-            } else {
-                hitCtx.drawImage(sourceImage, s.sourceRect.sx, s.sourceRect.sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
-            }
-            hitCtx.restore();
-            const localX = Math.floor(x - s.x);
-            const localY = Math.floor(y - s.y);
-            try {
-                const pixelData = hitCtx.getImageData(localX, localY, 1, 1).data;
-                if (pixelData[3] > 0) {
-                    return s;
-                }
-            } catch (e) { }
-        }
-    }
-    return null;
-}
-
-export function removeSpriteFromCurrentFrame(sprite) {
-  if (!rfAni) return;
-  const currentFrame = rfAni.index;
-  const sprites = frameSprites.get(currentFrame) || [];
-  const index = sprites.indexOf(sprite);
-  if (index > -1) {
-    sprites.splice(index, 1);
-  }
-}
-
-export function getFrameSprites(frameIndex) {
-    // This now correctly returns direct references to the sprites, not copies.
-    return frameSprites.get(frameIndex) || [];
-}
-
-export function setRfAni(instance) {
-  rfAni = instance;
-  if (rfAni && rfAni.frames.length === 0) {
-    rfAni.setFrames([[-1, -1]]);
-  }
-  if (!frameSprites.has(0)) {
-    frameSprites.set(0, []);
-  }
-}
-
-export function setFrameDuration(index, duration) {
-  frameDurations.set(index, duration);
-  saveState();
-}
-
-export function getFrameDuration(index) {
-  return frameDurations.get(index) ?? 100;
-}
-
-export function setFrameWidth(width) {
-  if (rfAni && width > 0) {
-    rfAni.frameWidth = width;
-    saveState();
-  }
-}
-
-export function setFrameHeight(height) {
-  if (rfAni && height > 0) {
-    rfAni.frameHeight = height;
-    saveState();
-  }
-}
-
-export function moveSpriteLayer(sprite, direction) {
-  if (!rfAni || !sprite) return;
-  const currentFrame = rfAni.index;
-  const sprites = frameSprites.get(currentFrame) || [];
-  const index = sprites.indexOf(sprite);
-  if (index === -1) return;
-  const newIndex = index + direction;
-  if (newIndex >= 0 && newIndex < sprites.length) {
-    sprites.splice(index, 1);
-    sprites.splice(newIndex, 0, sprite);
-  }
-}
-
-export function undo() {
-    const prevState = historyManager.undo();
-    if (prevState) loadState(prevState);
-}
-
-export function redo() {
-    const nextState = historyManager.redo();
-    if (nextState) loadState(nextState);
-}
-
-export function getCurrentFrameIndex() {
-    return rfAni ? rfAni.index : 0;
-}
-
-export function pasteFrameData(index, copiedData) {
-    if (!rfAni || !copiedData || !copiedData.sprites) return;
-    frameSprites.set(index, structuredClone(copiedData.sprites));
-    saveState();
 }
 
 export function getAnimationData() {
@@ -639,5 +319,168 @@ export function getAnimationData() {
     speed: rfAni.speed,
     frameSprites: frameSpritesData,
     frameDurations: Object.fromEntries(frameDurations)
+  };
+}
+
+export function addCanvasSprite(sourceName, sourceRect, x = 0, y = 0) {
+  if (!rfAni) return;
+  const currentFrame = rfAni.index;
+  if (!frameSprites.has(currentFrame)) frameSprites.set(currentFrame, []);
+  frameSprites.get(currentFrame).push({ sourceName, sourceRect, x, y, flipH: false, flipV: false });
+}
+
+export function getSpriteAtPoint(x, y) {
+    if (!rfAni) return null;
+    const currentFrameSprites = frameSprites.get(rfAni.index) || [];
+    for (let i = currentFrameSprites.length - 1; i >= 0; i--) {
+        const s = currentFrameSprites[i];
+        const { sWidth, sHeight } = s.sourceRect;
+        if (x >= s.x && x <= s.x + sWidth && y >= s.y && y <= s.y + sHeight) {
+            return s;
+        }
+    }
+    return null;
+}
+
+export function setRfAni(instance) {
+  rfAni = instance;
+  if (rfAni && rfAni.frames.length === 0) {
+    rfAni.setFrames([[-1, -1]]);
+  }
+  if (!frameSprites.has(0)) {
+    frameSprites.set(0, []);
+  }
+}
+
+export function getFrames() { return rfAni ? rfAni.frames : []; }
+export function setFrameIndex(index) { if (rfAni) { rfAni.index = Math.max(0, Math.min(rfAni.frames.length - 1, index)); clearSelection(); } }
+export function removeFrame(index) {
+  if (!rfAni) return;
+  const frames = rfAni.frames.slice();
+  if (index < 0 || index >= frames.length) return;
+  
+  frames.splice(index, 1);
+  rfAni.setFrames(frames);
+  frameSprites.delete(index);
+  const newFrameSprites = new Map();
+  for (const [frameIndex, sprites] of frameSprites.entries()) {
+    if (frameIndex > index) {
+      newFrameSprites.set(frameIndex - 1, sprites);
+    } else {
+      newFrameSprites.set(frameIndex, sprites);
+    }
+  }
+  frameSprites.clear();
+  for (const [frameIndex, sprites] of newFrameSprites.entries()) {
+    frameSprites.set(frameIndex, sprites);
+  }
+  if (rfAni.index >= frames.length) rfAni.index = frames.length > 0 ? frames.length - 1 : 0;
+  saveState();
+}
+export function moveFrame(oldIndex, newIndex) {
+  if (!rfAni) return;
+  const frames = rfAni.frames.slice();
+  if (oldIndex < 0 || oldIndex >= frames.length || newIndex < 0 || newIndex >= frames.length) return;
+  const [f] = frames.splice(oldIndex, 1);
+  frames.splice(newIndex, 0, f);
+  rfAni.setFrames(frames);
+  rfAni.index = newIndex;
+  
+  const tempSpriteList = [];
+  for (let i = 0; i < frames.length; i++) {
+    tempSpriteList.push(frameSprites.get(i));
+  }
+  const [movedSprites] = tempSpriteList.splice(oldIndex, 1);
+  tempSpriteList.splice(newIndex, 0, movedSprites);
+  frameSprites.clear();
+  tempSpriteList.forEach((sprites, i) => {
+    if (sprites) frameSprites.set(i, sprites);
+  });
+  saveState();
+}
+export function createFramePreview(index, scale = 2) {
+    if (!rfAni) return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = rfAni.frameWidth * scale;
+    canvas.height = rfAni.frameHeight * scale;
+    const c = canvas.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.fillStyle = '#111';
+    c.fillRect(0, 0, canvas.width, canvas.height);
+    const sprites = frameSprites.get(index) || [];
+    c.save();
+    c.translate(canvas.width / 2, canvas.height / 2);
+    for (const s of sprites) {
+        const sourceImage = spritesheetSources.get(s.sourceName);
+        if (sourceImage) {
+            c.save();
+            const { sWidth, sHeight } = s.sourceRect;
+            const centerX = s.x;
+            const centerY = s.y;
+            c.translate(centerX * scale, centerY * scale);
+            c.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
+            c.drawImage(sourceImage, s.sourceRect.sx, s.sourceRect.sy, sWidth, sHeight, (-sWidth / 2) * scale, (-sHeight / 2) * scale, sWidth * scale, sHeight * scale);
+            c.restore();
+        }
+    }
+    c.restore();
+    return canvas;
+}
+export function addFrame(frameData = null, initialSprites = null) {
+  if (!rfAni) return;
+  const frames = rfAni.frames.slice();
+  frames.push([-1, -1]);
+  rfAni.setFrames(frames);
+  const newFrameIndex = frames.length - 1;
+  if (initialSprites && initialSprites.length > 0) {
+    frameSprites.set(newFrameIndex, initialSprites);
+  } else {
+    const prevFrameSprites = frameSprites.get(newFrameIndex - 1) || [];
+    frameSprites.set(newFrameIndex, structuredClone(prevFrameSprites));
+  }
+  frameDurations.set(newFrameIndex, 100);
+  saveState();
+}
+export function setSpeed(speed) { if (rfAni) rfAni.setSpeed(speed); saveState(); }
+export function removeSpriteFromCurrentFrame(sprite) {
+  if (!rfAni) return;
+  const currentFrame = rfAni.index;
+  const sprites = frameSprites.get(currentFrame) || [];
+  const index = sprites.indexOf(sprite);
+  if (index > -1) {
+    sprites.splice(index, 1);
+  }
+}
+export function getFrameSprites(frameIndex) { return frameSprites.get(frameIndex) || []; }
+export function setFrameDuration(index, duration) { frameDurations.set(index, duration); saveState(); }
+export function getFrameDuration(index) { return frameDurations.get(index) ?? 100; }
+export function setFrameWidth(width) { if (rfAni && width > 0) { rfAni.frameWidth = width; saveState(); } }
+export function setFrameHeight(height) { if (rfAni && height > 0) { rfAni.frameHeight = height; saveState(); } }
+export function moveSpriteLayer(sprite, direction) {
+  if (!rfAni || !sprite) return;
+  const currentFrame = rfAni.index;
+  const sprites = frameSprites.get(currentFrame) || [];
+  const index = sprites.indexOf(sprite);
+  if (index === -1) return;
+  const newIndex = index + direction;
+  if (newIndex >= 0 && newIndex < sprites.length) {
+    sprites.splice(index, 1);
+    sprites.splice(newIndex, 0, sprite);
+  }
+}
+export function undo() { const prevState = historyManager.undo(); if (prevState) loadState(prevState); }
+export function redo() { const nextState = historyManager.redo(); if (nextState) loadState(nextState); }
+export function getCurrentFrameIndex() { return rfAni ? rfAni.index : 0; }
+export function pasteFrameData(index, copiedData) {
+    if (!rfAni || !copiedData || !copiedData.sprites) return;
+    frameSprites.set(index, structuredClone(copiedData.sprites));
+    saveState();
+}
+export function screenToWorld(x, y) {
+  const cx = canvasRef.width / 2;
+  const cy = canvasRef.height / 2;
+  return {
+    x: (x - cx) / zoomLevel - offsetX,
+    y: (y - cy) / zoomLevel - offsetY
   };
 }

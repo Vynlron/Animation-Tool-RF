@@ -1,5 +1,3 @@
-// js/tools.js
-
 import {
   pan,
   screenToWorld,
@@ -39,64 +37,27 @@ function intersects(rect1, rect2) {
 function updateSpriteOptionsPanel() {
   const panel = document.getElementById('sprite-options');
   if (!panel) return;
-
   const timeline = document.querySelector('.frame-panel');
   const timelineHeight = timeline ? timeline.offsetHeight : 0;
-
   if (selectedSprites.length > 0) {
     panel.style.bottom = `${timelineHeight + 10}px`;
     panel.style.display = 'flex';
-
-    if (selectedSprites.length === 1) {
-      const s = selectedSprites[0];
-      document.getElementById('sprite-scale').value = s.scale ?? 1;
-    } else {
-      document.getElementById('sprite-scale').value = '';
-    }
   } else {
     panel.style.display = 'none';
   }
 }
 
 export function initTools(canvas) {
-  document.getElementById('tool-toggle-grid').addEventListener('click', () => {
-    isGridVisible = !isGridVisible;
-  });
-
-  document.getElementById('play-btn').addEventListener('click', () => {
-    isPlaying = true;
-  });
-
-  document.getElementById('pause-btn').addEventListener('click', () => {
-    isPlaying = false;
-  });
-
+  document.getElementById('tool-toggle-grid').addEventListener('click', () => { isGridVisible = !isGridVisible; });
+  document.getElementById('play-btn').addEventListener('click', () => { isPlaying = true; });
+  document.getElementById('pause-btn').addEventListener('click', () => { isPlaying = false; });
   const loopToggle = document.getElementById('loop-toggle');
   loopToggle.checked = isLooping;
-  loopToggle.addEventListener('change', () => {
-    isLooping = loopToggle.checked;
-  });
-
-  document.getElementById('flip-h').addEventListener('click', () => {
-    selectedSprites.forEach(sprite => sprite.flipH = !sprite.flipH);
-    if (selectedSprites.length > 0) saveState();
-  });
-
-  document.getElementById('flip-v').addEventListener('click', () => {
-    selectedSprites.forEach(sprite => sprite.flipV = !sprite.flipV);
-    if (selectedSprites.length > 0) saveState();
-  });
-
-  document.getElementById('layer-up').addEventListener('click', () => {
-    selectedSprites.forEach(sprite => moveSpriteLayer(sprite, 1));
-    if (selectedSprites.length > 0) saveState();
-  });
-
-  document.getElementById('layer-down').addEventListener('click', () => {
-    [...selectedSprites].reverse().forEach(sprite => moveSpriteLayer(sprite, -1));
-    if (selectedSprites.length > 0) saveState();
-  });
-
+  loopToggle.addEventListener('change', () => { isLooping = loopToggle.checked; });
+  document.getElementById('flip-h').addEventListener('click', () => { selectedSprites.forEach(sprite => sprite.flipH = !sprite.flipH); if (selectedSprites.length > 0) saveState(); });
+  document.getElementById('flip-v').addEventListener('click', () => { selectedSprites.forEach(sprite => sprite.flipV = !sprite.flipV); if (selectedSprites.length > 0) saveState(); });
+  document.getElementById('layer-up').addEventListener('click', () => { selectedSprites.forEach(sprite => moveSpriteLayer(sprite, 1)); if (selectedSprites.length > 0) saveState(); });
+  document.getElementById('layer-down').addEventListener('click', () => { [...selectedSprites].reverse().forEach(sprite => moveSpriteLayer(sprite, -1)); if (selectedSprites.length > 0) saveState(); });
   document.getElementById('delete-selected-sprite').addEventListener('click', () => {
     if (selectedSprites.length > 0) {
       selectedSprites.forEach(sprite => removeSpriteFromCurrentFrame(sprite));
@@ -106,44 +67,24 @@ export function initTools(canvas) {
     updateSpriteOptionsPanel();
   });
 
-  // ✅ Sprite scale input
-  const scaleInput = document.getElementById('sprite-scale');
-  if (scaleInput) {
-    scaleInput.addEventListener('change', () => {
-      const scale = parseFloat(scaleInput.value);
-      if (!isNaN(scale) && scale > 0) {
-        selectedSprites.forEach(sprite => sprite.scale = scale);
-        saveState();
-      }
-    });
-  }
-
   canvas.addEventListener('contextmenu', e => e.preventDefault());
 
   canvas.addEventListener('mousedown', (e) => {
     const worldPos = screenToWorld(e.offsetX, e.offsetY);
     lastMousePos = { x: e.offsetX, y: e.offsetY };
-
     if (e.button === 2) {
       isPanning = true;
       canvas.style.cursor = 'grabbing';
     } else if (e.button === 0) {
       const spriteUnderCursor = getSpriteAtPoint(worldPos.x, worldPos.y);
-
       if (spriteUnderCursor) {
         isDraggingSprite = true;
-        if (e.shiftKey) {
-          addToSelection(spriteUnderCursor);
-        } else if (!selectedSprites.includes(spriteUnderCursor)) {
-          clearSelection();
-          addToSelection(spriteUnderCursor);
-        }
+        if (e.shiftKey) { addToSelection(spriteUnderCursor); }
+        else if (!selectedSprites.includes(spriteUnderCursor)) { clearSelection(); addToSelection(spriteUnderCursor); }
       } else {
         isMarqueeSelecting = true;
         marqueeStart = worldPos;
-        if (!e.shiftKey) {
-          clearSelection();
-        }
+        if (!e.shiftKey) clearSelection();
       }
     }
     updateSpriteOptionsPanel();
@@ -154,17 +95,12 @@ export function initTools(canvas) {
       const dx = e.offsetX - lastMousePos.x;
       const dy = e.offsetY - lastMousePos.y;
       pan(dx, dy);
-      lastMousePos = { x: e.offsetX, y: e.offsetY };
     } else if (isDraggingSprite) {
       const worldPos = screenToWorld(e.offsetX, e.offsetY);
       const worldLastPos = screenToWorld(lastMousePos.x, lastMousePos.y);
       const dx = worldPos.x - worldLastPos.x;
       const dy = worldPos.y - worldLastPos.y;
-      selectedSprites.forEach(sprite => {
-        sprite.x += dx;
-        sprite.y += dy;
-      });
-      lastMousePos = { x: e.offsetX, y: e.offsetY };
+      selectedSprites.forEach(sprite => { sprite.x += dx; sprite.y += dy; });
     } else if (isMarqueeSelecting) {
       const worldPos = screenToWorld(e.offsetX, e.offsetY);
       const x = Math.min(marqueeStart.x, worldPos.x);
@@ -173,36 +109,21 @@ export function initTools(canvas) {
       const h = Math.abs(marqueeStart.y - worldPos.y);
       setMarqueeRect({ x, y, w, h });
     }
+    lastMousePos = { x: e.offsetX, y: e.offsetY };
   });
 
   canvas.addEventListener('mouseup', () => {
     if (isMarqueeSelecting) {
-      let spritesSelected = false;
       if (marqueeRect) {
         const allSpritesInFrame = getFrameSprites(getCurrentFrameIndex());
         allSpritesInFrame.forEach(sprite => {
-          const spriteRect = {
-            x: sprite.x,
-            y: sprite.y,
-            w: sprite.sourceRect.sWidth * (sprite.scale ?? 1),
-            h: sprite.sourceRect.sHeight * (sprite.scale ?? 1)
-          };
-          if (intersects(marqueeRect, spriteRect)) {
-            addToSelection(sprite);
-            spritesSelected = true;
-          }
+          const spriteRect = { x: sprite.x, y: sprite.y, w: sprite.sourceRect.sWidth, h: sprite.sourceRect.sHeight };
+          if (intersects(marqueeRect, spriteRect)) addToSelection(sprite);
         });
       }
       clearMarqueeRect();
-      if (spritesSelected) {
-        saveState();
-      }
     }
-
-    if (isDraggingSprite) {
-      saveState();
-    }
-
+    if (isDraggingSprite) saveState();
     isPanning = false;
     isMarqueeSelecting = false;
     isDraggingSprite = false;
@@ -216,11 +137,7 @@ export function initTools(canvas) {
       if (e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
       return;
     }
-
-    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
-      return;
-    }
-
+    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
     if (selectedSprites.length > 0) {
       let moved = false;
       const increment = e.shiftKey ? 10 : 1;
@@ -239,22 +156,9 @@ export function initTools(canvas) {
       saveState();
     }
   });
-
   updateSpriteOptionsPanel();
 }
-
-export function isPlaybackEnabled() {
-  return isPlaying;
-}
-
-export function isLoopingEnabled() {
-  return isLooping;
-}
-
-export function pausePlayback() {
-  isPlaying = false;
-}
-
-export function isGridEnabled() {
-  return isGridVisible;
-}
+export function isPlaybackEnabled() { return isPlaying; }
+export function isLoopingEnabled() { return isLooping; }
+export function pausePlayback() { isPlaying = false; }
+export function isGridEnabled() { return isGridVisible; }
