@@ -2,9 +2,9 @@ import {
     initStudio, 
     loadAnimation, 
     setRfAni, 
-    getEditorState, // Change this line
+    getEditorState,
     setFrameWidth,
-    setFrameHeight
+    setFrameHeight,
 } from '../studio/studio.js';
 import { initTools } from './tools.js';
 import { initTimeline, renderTimeline } from './timeline.js';
