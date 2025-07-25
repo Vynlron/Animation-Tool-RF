@@ -71,14 +71,23 @@ export function showModal({ title, confirmText = 'OK', defaultValue = '', onConf
     modalInput.focus();
 }
 
-export function showContentModal(title, contentElement) {
+export function showContentModal(title, contentElement, actionsElement = null) {
     const modal = document.getElementById('preview-modal');
     document.getElementById('preview-modal-title').textContent = title;
+    
     const contentArea = document.getElementById('preview-modal-content');
     contentArea.innerHTML = '';
     contentArea.appendChild(contentElement);
+
+    const actionsArea = document.getElementById('preview-modal-actions');
+    actionsArea.innerHTML = '';
+    if (actionsElement) {
+        actionsArea.appendChild(actionsElement);
+    }
+
     modal.classList.remove('hidden');
 }
+
 
 document.addEventListener('DOMContentLoaded', async () => { 
     const studioEl = document.getElementById('studio');

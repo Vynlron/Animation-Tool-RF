@@ -100,3 +100,8 @@
     text-overflow: ellipsis;
     max-width: 150px; /* Adjust as needed */
 }
+
+#preview-modal .modal-box {
+  max-width: 500px; /* You can adjust this value */
+  width: 150%;
+}

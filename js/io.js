@@ -1,4 +1,4 @@
-import { createFramePreview, getFrameDuration, getFrames, getAnimationData } from '../studio/studio.js';
+import { createFramePreview, getFrameDuration, getFrames, getEditorState } from '../studio/studio.js';
 
 let showAppModal = null;
 let showContentModal = null;
@@ -48,6 +48,7 @@ function handleImport(event, onLoaded) {
 
 function handleGifPreview() {
     const frames = getFrames();
+    const animData = getEditorState(); // Get animation data for the name
     if (frames.length === 0) {
         alert("There are no frames to create a GIF from.");
         return;
@@ -69,7 +70,8 @@ function handleGifPreview() {
     });
 
     frames.forEach((frame, index) => {
-        const frameCanvas = createFramePreview(index, 2);
+        // Change the scale factor from 2 to 4
+        const frameCanvas = createFramePreview(index, 4); 
         if (frameCanvas && frameCanvas.width > 0 && frameCanvas.height > 0) {
             const duration = getFrameDuration(index);
             gif.addFrame(frameCanvas, { delay: duration });
@@ -82,7 +84,18 @@ function handleGifPreview() {
         img.src = url;
         img.style.maxWidth = '100%';
         img.style.imageRendering = 'pixelated';
-        showContentModal('GIF Preview', img); // Use the new modal function
+
+        // Create the download button
+        const downloadBtn = document.createElement('a');
+        downloadBtn.href = url;
+        downloadBtn.textContent = 'Download GIF';
+        downloadBtn.download = `${animData.name || 'animation'}.gif`;
+        downloadBtn.className = 'modal-btn'; // Style it like other modal buttons
+
+        const actionsContainer = document.createElement('div');
+        actionsContainer.appendChild(downloadBtn);
+
+        showContentModal('GIF Preview', img, actionsContainer);
     });
 
     gif.render();
