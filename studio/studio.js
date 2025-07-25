@@ -55,21 +55,33 @@ export function getEditorState() {
 
 export function getExportData() {
   if (!rfAni) return null;
+  
   const frameSpritesData = {};
+  const requiredSources = new Set();
+
   for (const [frameIndex, sprites] of frameSprites.entries()) {
     if (sprites.length === 0) {
       frameSpritesData[frameIndex] = [];
       continue;
     }
     
+    // Track all unique spritesheet paths used in the animation
+    sprites.forEach(s => {
+      requiredSources.add(s.sourceName); 
+    });
+    
+    // Calculate the collective bounding box to center the animation
     let minX = Infinity, maxX = -Infinity;
     let minY = Infinity, maxY = -Infinity;
     
     sprites.forEach(s => {
+      const scale = s.scale ?? 1;
+      const w = s.sourceRect.sWidth * scale;
+      const h = s.sourceRect.sHeight * scale;
       minX = Math.min(minX, s.x);
-      maxX = Math.max(maxX, s.x + s.sourceRect.sWidth);
+      maxX = Math.max(maxX, s.x + w);
       minY = Math.min(minY, s.y);
-      maxY = Math.max(maxY, s.y + s.sourceRect.sHeight);
+      maxY = Math.max(maxY, s.y + h);
     });
     
     const collectiveWidth = maxX - minX;
@@ -77,18 +89,21 @@ export function getExportData() {
     const collectiveCenterX = minX + collectiveWidth / 2;
     const collectiveCenterY = minY + collectiveHeight / 2;
     
+    // Save each sprite's data relative to the collective center
     frameSpritesData[frameIndex] = sprites.map(sprite => ({
       sourceName: sprite.sourceName,
       sourceRect: sprite.sourceRect,
       x: sprite.x - collectiveCenterX,
       y: sprite.y - collectiveCenterY,
       flipH: sprite.flipH,
-      flipV: sprite.flipV
+      flipV: sprite.flipV,
+      scale: sprite.scale ?? 1
     }));
   }
+  
   return {
     name: rfAni.name,
-    sources: Array.from(spritesheetSources.keys()),
+    sources: Array.from(requiredSources), // Save the array of full paths
     frameWidth: rfAni.frameWidth,
     frameHeight: rfAni.frameHeight,
     frames: rfAni.frames.slice(),
@@ -99,7 +114,7 @@ export function getExportData() {
 }
 
 export function saveState() {
-    const currentState = getAnimationData();
+    const currentState = getEditorState();
     if (currentState) {
         historyManager.saveState(currentState);
     }
@@ -108,7 +123,7 @@ export function saveState() {
 export async function loadState(stateData) {
     if (!stateData) return;
     const shouldSave = false;
-    loadAnimation(stateData, async () => {
+    await loadAnimation(stateData, async () => {
         const main = await import('../js/main.js');
         main.updateUIForLoadedAnimation(stateData);
     }, shouldSave);
@@ -228,11 +243,16 @@ function loop(time) {
         if (sourceImage) {
             ctx.save();
             const { sWidth, sHeight } = s.sourceRect;
-            const drawX = s.x + sWidth / 2;
-            const drawY = s.y + sHeight / 2;
+            const scale = s.scale ?? 1;
+            const scaledW = sWidth * scale;
+            const scaledH = sHeight * scale;
+
+            const drawX = s.x + scaledW / 2;
+            const drawY = s.y + scaledH / 2;
+            
             ctx.translate(drawX, drawY);
             ctx.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
-            ctx.drawImage(sourceImage, s.sourceRect.sx, s.sourceRect.sy, sWidth, sHeight, -sWidth / 2, -sHeight / 2, sWidth, sHeight);
+            ctx.drawImage(sourceImage, s.sourceRect.sx, s.sourceRect.sy, sWidth, sHeight, -scaledW / 2, -scaledH / 2, scaledW, scaledH);
             ctx.restore();
         }
     }
@@ -243,8 +263,9 @@ function loop(time) {
     for (const s of selectedSprites) {
         if (currentFrameSprites.includes(s)) {
             const { sWidth, sHeight } = s.sourceRect;
-            ctx.fillRect(s.x, s.y, sWidth, sHeight);
-            ctx.strokeRect(s.x, s.y, sWidth, sHeight);
+            const scale = s.scale ?? 1;
+            ctx.fillRect(s.x, s.y, sWidth * scale, sHeight * scale);
+            ctx.strokeRect(s.x, s.y, sWidth * scale, sHeight * scale);
         }
     }
 
@@ -269,7 +290,12 @@ export async function loadAnimation(data, onReady, shouldSave = true) {
     
     if (data.frameSprites) {
         for (const [frameIndex, sprites] of Object.entries(data.frameSprites)) {
-            const loadedSprites = sprites.map(spriteData => ({ ...spriteData, flipH: spriteData.flipH || false, flipV: spriteData.flipV || false }));
+            const loadedSprites = sprites.map(spriteData => ({ 
+                ...spriteData, 
+                flipH: spriteData.flipH || false, 
+                flipV: spriteData.flipV || false,
+                scale: spriteData.scale ?? 1
+            }));
             frameSprites.set(parseInt(frameIndex), loadedSprites.filter(s => s));
         }
     }
@@ -281,14 +307,44 @@ export async function loadAnimation(data, onReady, shouldSave = true) {
     setRfAni(new RfAni(new Image(), data.frameWidth, data.frameHeight, data.frames, data.speed, data.name || 'Unnamed', ''));
     
     const requiredSources = data.sources || [];
-    if (requiredSources.length > 0) {
-        const main = await import('../js/main.js');
-        const sourceFileMap = await main.promptForMissingFiles(requiredSources);
-        if (sourceFileMap.size > 0) {
-            const customSheetDefs = Array.from(sourceFileMap.entries()).map(([name, file]) => ({ name, file }));
-            await loadAndDisplaySheets(customSheetDefs, true);
+if (requiredSources.length > 0) {
+    const existingInServer = [
+        'realmforge_head.png',
+        'realmforge_body.png',
+        'realmforge_sword1.png'
+        // Add any other preloaded assets here
+    ];
+
+    const preloadedDefs = [];
+    const missing = [];
+
+    for (const source of requiredSources) {
+        if (existingInServer.includes(source)) {
+            preloadedDefs.push({
+                name: source,
+                url: `assets/${source}`,
+                spriteWidth: 20,
+                spriteHeight: 20
+            });
+        } else {
+            missing.push(source);
         }
     }
+
+    if (preloadedDefs.length > 0) {
+        const { loadAndDisplaySheets } = await import('../js/sprites.js');
+        await loadAndDisplaySheets(preloadedDefs, true);
+    }
+
+    if (missing.length > 0) {
+        const main = await import('../js/main.js');
+        const sourceFileMap = await main.promptForMissingFiles(missing);
+        if (sourceFileMap.size > 0) {
+            const customSheetDefs = Array.from(sourceFileMap.entries()).map(([name, file]) => ({ name, file }));
+            await loadAndDisplaySheets(customSheetDefs, false);
+        }
+    }
+}
 
     if (onReady) onReady();
     if (shouldSave) {
@@ -307,7 +363,8 @@ export function getAnimationData() {
       x: sprite.x,
       y: sprite.y,
       flipH: sprite.flipH,
-      flipV: sprite.flipV
+      flipV: sprite.flipV,
+      scale: sprite.scale ?? 1
     }));
   }
   return {
@@ -326,7 +383,7 @@ export function addCanvasSprite(sourceName, sourceRect, x = 0, y = 0) {
   if (!rfAni) return;
   const currentFrame = rfAni.index;
   if (!frameSprites.has(currentFrame)) frameSprites.set(currentFrame, []);
-  frameSprites.get(currentFrame).push({ sourceName, sourceRect, x, y, flipH: false, flipV: false });
+  frameSprites.get(currentFrame).push({ sourceName, sourceRect, x, y, flipH: false, flipV: false, scale: 1 });
 }
 
 export function getSpriteAtPoint(x, y) {
@@ -335,7 +392,10 @@ export function getSpriteAtPoint(x, y) {
     for (let i = currentFrameSprites.length - 1; i >= 0; i--) {
         const s = currentFrameSprites[i];
         const { sWidth, sHeight } = s.sourceRect;
-        if (x >= s.x && x <= s.x + sWidth && y >= s.y && y <= s.y + sHeight) {
+        const scale = s.scale ?? 1;
+        const w = sWidth * scale;
+        const h = sHeight * scale;
+        if (x >= s.x && x <= s.x + w && y >= s.y && y <= s.y + h) {
             return s;
         }
     }
@@ -354,6 +414,7 @@ export function setRfAni(instance) {
 
 export function getFrames() { return rfAni ? rfAni.frames : []; }
 export function setFrameIndex(index) { if (rfAni) { rfAni.index = Math.max(0, Math.min(rfAni.frames.length - 1, index)); clearSelection(); } }
+
 export function removeFrame(index) {
   if (!rfAni) return;
   const frames = rfAni.frames.slice();
@@ -415,11 +476,12 @@ export function createFramePreview(index, scale = 2) {
         if (sourceImage) {
             c.save();
             const { sWidth, sHeight } = s.sourceRect;
-            const centerX = s.x;
-            const centerY = s.y;
-            c.translate(centerX * scale, centerY * scale);
+            const spriteScale = (s.scale ?? 1) * scale;
+            const scaledW = sWidth * spriteScale;
+            const scaledH = sHeight * spriteScale;
+            c.translate(s.x * scale, s.y * scale);
             c.scale(s.flipH ? -1 : 1, s.flipV ? -1 : 1);
-            c.drawImage(sourceImage, s.sourceRect.sx, s.sourceRect.sy, sWidth, sHeight, (-sWidth / 2) * scale, (-sHeight / 2) * scale, sWidth * scale, sHeight * scale);
+            c.drawImage(sourceImage, s.sourceRect.sx, s.sourceRect.sy, sWidth, sHeight, -scaledW / 2, -scaledH / 2, scaledW, scaledH);
             c.restore();
         }
     }

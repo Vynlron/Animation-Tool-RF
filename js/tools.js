@@ -10,6 +10,7 @@ import {
   selectedSprites,
   clearSelection,
   addToSelection,
+  setSelection,
   getFrameSprites,
   getCurrentFrameIndex,
   marqueeRect,
@@ -29,9 +30,9 @@ let marqueeStart = { x: 0, y: 0 };
 
 function intersects(rect1, rect2) {
   return !(rect2.x > rect1.x + rect1.w ||
-           rect2.x + rect1.w < rect1.x ||
+           rect2.x + rect2.w < rect1.x || // Corrected intersection logic
            rect2.y > rect1.y + rect1.h ||
-           rect2.y + rect1.h < rect1.y);
+           rect2.y + rect2.h < rect1.y);
 }
 
 function updateSpriteOptionsPanel() {
@@ -39,9 +40,18 @@ function updateSpriteOptionsPanel() {
   if (!panel) return;
   const timeline = document.querySelector('.frame-panel');
   const timelineHeight = timeline ? timeline.offsetHeight : 0;
+
   if (selectedSprites.length > 0) {
     panel.style.bottom = `${timelineHeight + 10}px`;
     panel.style.display = 'flex';
+
+    // Update scale input when selection changes
+    const scaleInput = document.getElementById('sprite-scale');
+    if (scaleInput) {
+        const firstScale = selectedSprites[0].scale ?? 1;
+        const allSameScale = selectedSprites.every(s => (s.scale ?? 1) === firstScale);
+        scaleInput.value = allSameScale ? firstScale : '';
+    }
   } else {
     panel.style.display = 'none';
   }
@@ -58,14 +68,27 @@ export function initTools(canvas) {
   document.getElementById('flip-v').addEventListener('click', () => { selectedSprites.forEach(sprite => sprite.flipV = !sprite.flipV); if (selectedSprites.length > 0) saveState(); });
   document.getElementById('layer-up').addEventListener('click', () => { selectedSprites.forEach(sprite => moveSpriteLayer(sprite, 1)); if (selectedSprites.length > 0) saveState(); });
   document.getElementById('layer-down').addEventListener('click', () => { [...selectedSprites].reverse().forEach(sprite => moveSpriteLayer(sprite, -1)); if (selectedSprites.length > 0) saveState(); });
+  
   document.getElementById('delete-selected-sprite').addEventListener('click', () => {
     if (selectedSprites.length > 0) {
-      selectedSprites.forEach(sprite => removeSpriteFromCurrentFrame(sprite));
-      saveState();
+        selectedSprites.forEach(s => removeSpriteFromCurrentFrame(s));
+        saveState();
     }
     clearSelection();
     updateSpriteOptionsPanel();
   });
+
+  // Listener for the scale input
+  const scaleInput = document.getElementById('sprite-scale');
+  if (scaleInput) {
+      scaleInput.addEventListener('change', () => {
+          const scale = parseFloat(scaleInput.value);
+          if (!isNaN(scale) && scale > 0) {
+              selectedSprites.forEach(sprite => sprite.scale = scale);
+              saveState();
+          }
+      });
+  }
 
   canvas.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -116,10 +139,15 @@ export function initTools(canvas) {
     if (isMarqueeSelecting) {
       if (marqueeRect) {
         const allSpritesInFrame = getFrameSprites(getCurrentFrameIndex());
+        const newlySelected = [];
         allSpritesInFrame.forEach(sprite => {
-          const spriteRect = { x: sprite.x, y: sprite.y, w: sprite.sourceRect.sWidth, h: sprite.sourceRect.sHeight };
-          if (intersects(marqueeRect, spriteRect)) addToSelection(sprite);
+          const scale = sprite.scale ?? 1;
+          const spriteRect = { x: sprite.x, y: sprite.y, w: sprite.sourceRect.sWidth * scale, h: sprite.sourceRect.sHeight * scale };
+          if (intersects(marqueeRect, spriteRect)) {
+            newlySelected.push(sprite);
+          }
         });
+        setSelection(newlySelected);
       }
       clearMarqueeRect();
     }
